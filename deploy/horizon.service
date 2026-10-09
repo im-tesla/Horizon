@@ -1,0 +1,20 @@
+[Unit]
+Description=Horizon original-quality media server
+After=network.target
+
+[Service]
+Type=simple
+User=horizon
+WorkingDirectory=/opt/horizon
+EnvironmentFile=/etc/horizon.env
+ExecStart=/usr/bin/node /opt/horizon/dist/server/index.mjs
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/horizon
+
+[Install]
+WantedBy=multi-user.target

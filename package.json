@@ -1,0 +1,64 @@
+{
+  "name": "horizon-stream",
+  "version": "0.1.7",
+  "private": true,
+  "description": "Original-quality streaming for Windows and Linux, powered by mpv.",
+  "author": "Horizon contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/im-tesla/Horizon.git"
+  },
+  "homepage": "https://github.com/im-tesla/Horizon",
+  "bugs": "https://github.com/im-tesla/Horizon/issues",
+  "type": "module",
+  "main": "dist/desktop/main.cjs",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "bundle:mpv": "node scripts/bundle-mpv.mjs",
+    "dev": "node scripts/dev.mjs",
+    "dev:server": "tsx watch src/server/index.ts",
+    "dev:ui": "vite --host 127.0.0.1",
+    "build": "npm run typecheck && node scripts/build.mjs",
+    "build:server": "node scripts/build-server.mjs",
+    "package:server": "npm run build:server && node scripts/server-archive.mjs",
+    "test:server-release": "node scripts/server-release-smoke.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "test:desktop": "node scripts/desktop-smoke.mjs",
+    "test:together": "tsx scripts/watch-together-smoke.ts",
+    "start:server": "node dist/server/index.mjs",
+    "start:desktop": "electron .",
+    "package": "npm run build && electron-builder --config electron-builder.cjs --publish never",
+    "package:dir": "npm run build && electron-builder --config electron-builder.cjs --dir --publish never"
+  },
+  "dependencies": {
+    "@fastify/rate-limit": "11.2.1",
+    "chokidar": "5.0.0",
+    "dotenv": "18.0.6",
+    "electron-updater": "6.8.9",
+    "fastify": "5.12.5",
+    "koffi": "3.3.2",
+    "lucide-react": "1.53.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2",
+    "playwright": "1.64.0",
+    "prettier": "3.9.9",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
+}

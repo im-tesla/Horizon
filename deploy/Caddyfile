@@ -1,0 +1,7 @@
+# Replace media.example.com and proxy to the locally bound server.
+media.example.com {
+    reverse_proxy 127.0.0.1:8090 {
+        # Preserve streaming and seek requests without response buffering.
+        flush_interval -1
+    }
+}

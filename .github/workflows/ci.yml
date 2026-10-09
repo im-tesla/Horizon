@@ -1,0 +1,54 @@
+name: Checks and desktop builds
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+      - name: Install native Linux playback build dependencies
+        if: runner.os == 'Linux'
+        run: bash scripts/install-mpv-build-deps.sh
+      - name: Package desktop
+        run: npm run package:dir
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: horizon-${{ runner.os }}-unpacked
+          path: release/*-unpacked/
+          retention-days: 7
+  server:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Build precompiled native server archive
+        run: npm run package:server
+      - run: npm run test:server-release
+      - uses: actions/upload-artifact@v7
+        with:
+          name: horizon-server
+          path: release-assets/horizon-server-*-linux-x64.tar.gz
+          if-no-files-found: error
+          retention-days: 7
