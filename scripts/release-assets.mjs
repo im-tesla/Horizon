@@ -6,8 +6,8 @@ export function releaseAssets(directory, version) {
   if (!/^\d+\.\d+\.\d+$/.test(version ?? ""))
     throw new Error("Invalid stable release version.");
   const windows = `Horizon-${version}-windows-x64.exe`;
-  const appImage = `Horizon-${version}-linux-x64.AppImage`;
-  const deb = `Horizon-${version}-linux-x64.deb`;
+  const appImage = `Horizon-${version}-linux-x86_64.AppImage`;
+  const deb = `Horizon-${version}-linux-amd64.deb`;
   const required = [
     windows,
     `Horizon-${version}-windows-x64-portable.exe`,

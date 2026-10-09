@@ -161,7 +161,7 @@ export class UpdateManager {
     const name =
       platform === "win32"
         ? `Horizon-${next}-windows-x64${portable ? "-portable" : ""}.exe`
-        : `Horizon-${next}-linux-x64.AppImage`;
+        : `Horizon-${next}-linux-x86_64.AppImage`;
     const url = `https://github.com/${repository}/releases/download/${release.tag_name}/${name}`;
     if (
       !release.assets.some(

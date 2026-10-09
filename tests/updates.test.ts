@@ -151,3 +151,17 @@ test("release checks reject downgrades and previews, and recover from a network 
   assert.equal((await manager.check()).status, "error");
   assert.equal((await manager.check()).status, "available");
 });
+
+test("unpacked Linux clients offer the AppImage's platform-specific release filename", async () => {
+  const asset = {
+    name: "Horizon-0.2.0-linux-x86_64.AppImage",
+    browser_download_url:
+      "https://github.com/im-tesla/Horizon/releases/download/v0.2.0/Horizon-0.2.0-linux-x86_64.AppImage",
+  };
+  const { manager, updater } = fixture(
+    { platform: "linux", feed: false },
+    async () => new Response(JSON.stringify(latest({ assets: [asset] }))),
+  );
+  assert.equal((await manager.check()).downloadUrl, asset.browser_download_url);
+  assert.equal(updater.calls, 0);
+});

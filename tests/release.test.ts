@@ -123,8 +123,8 @@ test("publishing requires a complete version-matched release with valid update h
   );
   const version = "1.2.3";
   const windows = `Horizon-${version}-windows-x64.exe`,
-    appImage = `Horizon-${version}-linux-x64.AppImage`,
-    deb = `Horizon-${version}-linux-x64.deb`;
+    appImage = `Horizon-${version}-linux-x86_64.AppImage`,
+    deb = `Horizon-${version}-linux-amd64.deb`;
   const names = [
     windows,
     `${windows}.blockmap`,
