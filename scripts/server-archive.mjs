@@ -66,6 +66,19 @@ try {
     process.execPath,
     [
       process.env.npm_execpath,
+      "install",
+      "--package-lock-only",
+      "--omit=dev",
+      "--ignore-scripts",
+      "--no-audit",
+      "--no-fund",
+    ],
+    { cwd: directory, stdio: "inherit" },
+  );
+  execFileSync(
+    process.execPath,
+    [
+      process.env.npm_execpath,
       "ci",
       "--omit=dev",
       "--ignore-scripts",
