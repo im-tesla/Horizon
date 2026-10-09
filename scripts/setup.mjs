@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 await mkdir("media", { recursive: true });
+await mkdir(".horizon", { recursive: true });
 if (!existsSync(".env")) {
   const template = await readFile(".env.example", "utf8");
   await writeFile(

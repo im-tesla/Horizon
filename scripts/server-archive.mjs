@@ -34,9 +34,12 @@ try {
     license: "MIT",
     engines: source.engines,
     scripts: {
-      start: "node dist/server/index.mjs",
-      "start:server": "node dist/server/index.mjs",
+      start: "node horizon-server.mjs start",
+      "start:server": "node horizon-server.mjs start",
       setup: "node scripts/setup.mjs",
+      update: "node horizon-server.mjs update",
+      "update:check": "node horizon-server.mjs check",
+      rollback: "node horizon-server.mjs rollback",
     },
     dependencies: Object.fromEntries(
       ["@fastify/rate-limit", "chokidar", "dotenv", "fastify", "zod"].map(
@@ -96,9 +99,17 @@ try {
     "LICENSE",
   ])
     await copyFile(path.join(root, file), path.join(directory, file));
+  await copyFile(
+    path.join(root, "scripts/server-manager.mjs"),
+    path.join(directory, "horizon-server.mjs"),
+  );
+  await copyFile(
+    path.join(root, "scripts/server-manager.mjs"),
+    path.join(root, "release-assets/horizon-server.mjs"),
+  );
   await writeFile(
     path.join(directory, "README.md"),
-    `# Horizon server ${version}\n\nPrebuilt native server. Requires Node.js 22.12 or newer and ffprobe.\nOn Ubuntu, install ffprobe with \`sudo apt install ffmpeg\`.\n\n\`\`\`sh\nnpm run setup\n# Edit .env: token, media directory, host, port, and data directory.\nnpm start\n\`\`\`\n\nRuntime dependencies are included; no npm install or compilation is needed.\nFor systemd, see deploy/horizon.service. Set HORIZON_DATA_DIR=/var/lib/horizon\nand put media outside /home when using ProtectHome=true. Configuration belongs\nin /etc/horizon.env; the example service runs from /opt/horizon.\n\nServer upgrades: stop the service, replace application files with the new release,\npreserve .env and your media/data directories, and restart the service.\n\nFull documentation: https://github.com/im-tesla/Horizon#run-the-linux-server\n`,
+    `# Horizon server ${version}\n\nRequires Node.js 22.12 or newer and ffprobe. On Ubuntu: \`sudo apt install ffmpeg\`.\n\n\`\`\`sh\nnpm run setup\n# Edit .env to choose your media folder and network settings.\nnpm start\n\`\`\`\n\nKeep this folder as your permanent server folder. Updates download only application files:\n\n\`\`\`sh\nnpm run update:check\nnpm run update\n# Restore the previous version if needed:\nnpm run rollback\n\`\`\`\n\nA running server restarts after an update. Media, .env, and the library cache stay in place, including relative paths inside this folder. Previous application versions are kept under .horizon/releases. No compilation or npm install is needed.\n\nFor automatic startup, see deploy/horizon.service.\nFull setup and older-installation upgrades: https://github.com/im-tesla/Horizon/blob/main/docs/SERVER_SETUP.md\n`,
   );
   const output = path.join(
     root,

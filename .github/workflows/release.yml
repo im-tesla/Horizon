@@ -85,7 +85,9 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: release-server
-          path: release-assets/horizon-server-*-linux-x64.tar.gz
+          path: |
+            release-assets/horizon-server-*-linux-x64.tar.gz
+            release-assets/horizon-server.mjs
           if-no-files-found: error
           retention-days: 7
   publish:

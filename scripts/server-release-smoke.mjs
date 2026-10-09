@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, fork } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { once } from "node:events";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
+import { extractRelease } from "./server-manager.mjs";
 
 const { version } = JSON.parse(await readFile("package.json", "utf8"));
 const directory = await mkdtemp(
@@ -27,12 +28,17 @@ try {
       ),
     "The server archive must contain only server runtime files and no local configuration.",
   );
-  execFileSync("tar", ["-xzf", archive, "-C", directory]);
+  await extractRelease(archive, directory, version);
   const runtime = path.join(directory, `horizon-server-${version}`);
+  const manifest = JSON.parse(
+    await readFile(path.join(runtime, "package.json"), "utf8"),
+  );
+  assert.equal(manifest.version, version);
+  assert.equal(manifest.scripts.update, "node horizon-server.mjs update");
+  assert.equal(manifest.scripts.rollback, "node horizon-server.mjs rollback");
   assert.equal(
-    JSON.parse(await readFile(path.join(runtime, "package.json"), "utf8"))
-      .version,
-    version,
+    await readFile(path.join(runtime, "horizon-server.mjs"), "utf8"),
+    await readFile("release-assets/horizon-server.mjs", "utf8"),
   );
   execFileSync(process.execPath, ["scripts/setup.mjs"], {
     cwd: runtime,
@@ -48,7 +54,7 @@ try {
   const port = socket.address().port;
   await new Promise((resolve) => socket.close(resolve));
   const token = randomBytes(32).toString("hex");
-  child = spawn(process.execPath, ["dist/server/index.mjs"], {
+  child = fork(path.join(runtime, "horizon-server.mjs"), ["start"], {
     cwd: runtime,
     env: {
       ...process.env,
@@ -59,7 +65,7 @@ try {
       HORIZON_DATA_DIR: path.join(directory, "data"),
       HORIZON_FFPROBE: process.execPath,
     },
-    stdio: "ignore",
+    stdio: ["ignore", "ignore", "ignore", "ipc"],
     windowsHide: true,
   });
   const url = `http://127.0.0.1:${port}`;
@@ -76,6 +82,12 @@ try {
     throw new Error("The archived server did not become ready.");
   };
   await wait(async () => (await fetch(`${url}/api/health`)).ok);
+  await wait(
+    async () =>
+      JSON.parse(
+        await readFile(path.join(runtime, ".horizon/server-run.json"), "utf8"),
+      ).ready,
+  );
   assert.equal((await fetch(`${url}/api/library`)).status, 401);
   const payload = Buffer.from("Horizon original media bytes");
   await writeFile(path.join(media, "Release.Movie.2026.mp4"), payload);
@@ -102,7 +114,7 @@ try {
 } finally {
   if (child && child.exitCode === null) {
     const exit = once(child, "exit");
-    child.kill();
+    child.send({ type: "horizon:stop" });
     await exit;
   }
   if (path.dirname(directory) !== os.tmpdir())

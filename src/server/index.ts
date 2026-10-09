@@ -15,6 +15,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535)
   throw new Error("Invalid HORIZON_PORT.");
 try {
   await app.listen({ host: process.env.HORIZON_HOST ?? "127.0.0.1", port });
+  process.send?.({ type: "horizon:ready" });
 } catch (error) {
   app.log.error(error);
   await app.close();

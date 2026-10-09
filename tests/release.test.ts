@@ -132,6 +132,7 @@ test("publishing requires a complete version-matched release with valid update h
     appImage,
     deb,
     `horizon-server-${version}-linux-x64.tar.gz`,
+    "horizon-server.mjs",
   ];
   const bytes = Buffer.from("Release asset fixture");
   const hash = createHash("sha512").update(bytes).digest("base64");
@@ -146,7 +147,7 @@ test("publishing requires a complete version-matched release with valid update h
       path.join(directory, "latest-linux.yml"),
       `version: ${version}\nfiles:\n  - url: ${appImage}\n    sha512: ${hash}\n  - url: ${deb}\n    sha512: ${hash}\n`,
     );
-    assert.equal(releaseAssets(directory, version).length, 8);
+    assert.equal(releaseAssets(directory, version).length, 9);
     await writeFile(
       path.join(directory, "latest.yml"),
       `version: 1.2.2\nfiles:\n  - url: ${windows}\n    sha512: ${hash}\n`,

@@ -75,6 +75,8 @@ Everyone can play, pause, and seek. Each person gets the original stream and cho
 
 Installed Windows builds and Linux packages download updates and offer **Install & restart** in Settings. Portable Windows builds offer **Download update** so you can replace the file yourself. You can also click **Check for updates** at any time.
 
+Server hosts can run **`npm run update`** in their existing server folder. Movies, settings, and the library cache stay in place. See [server updates](docs/SERVER_SETUP.md#updating-the-server) for the one-time upgrade from older versions.
+
 - **Need to host your files?** [Server setup](docs/SERVER_SETUP.md)
 - **Connection, Linux, or playback questions?** [Extra setup and troubleshooting](docs/ADVANCED_SETUP.md)
 - **Want to contribute or build Horizon?** [Developer guide](docs/DEVELOPMENT.md)

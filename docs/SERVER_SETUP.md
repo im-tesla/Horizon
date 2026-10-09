@@ -28,7 +28,7 @@ On the Linux computer, open [Horizon Releases](https://github.com/im-tesla/Horiz
 
 Right-click the download and choose **Extract here**. Open the extracted folder (its name starts with `horizon-server`), then open a terminal in that folder.
 
-The download is already built and includes its dependencies. You can go straight to setup.
+The download is already built and includes its dependencies. Keep this as your permanent server folder; future updates happen inside it. You can rename the folder to `horizon-server` if you prefer.
 
 ## 3. Choose your media folder
 
@@ -106,12 +106,31 @@ Each viewer receives their own full-quality stream. Your server's upload connect
 
 ## Updating the server
 
-1. Stop the server and extract the new download into a new folder.
-2. Copy your **`.env`** into the new server folder.
-3. If your media and data folders are inside the old server folder, copy them into the same places in the new one. The default data folder is **`.horizon/server`**. Press **Ctrl+H** in Ubuntu's file manager to show hidden files and folders.
-4. If your media or data is stored elsewhere, keep it there; the paths in `.env` should still point to it.
-5. Open a terminal in the new server folder and run `npm start`.
+Open another terminal in your existing server folder and run:
 
-Keep the old folder until you have confirmed that the new version shows your library.
+```sh
+npm run update
+```
+
+Horizon downloads the latest server from GitHub, checks it, and briefly restarts your running server. If the server is stopped, run `npm start` afterward. Updating restarts Watch Together rooms, so finish your movie night first.
+
+**Your media folder, `.env`, access token, and library cache stay where they are.** This also works when your movies are inside the server folder. Application versions are kept separately under `.horizon/releases`; you do not need to extract another download or move your movies.
+
+To check without installing, run `npm run update:check`. To go back to the previous version, run `npm run rollback`. If a new version cannot start, Horizon restores the running version automatically.
+
+### Already using version 0.1.8 or earlier?
+
+Do this once to add the update command to your current folder:
+
+1. Stop your old server with **Ctrl+C**.
+2. Open a terminal in that same server folder and run:
+
+```sh
+curl -fL https://github.com/im-tesla/Horizon/releases/latest/download/horizon-server.mjs -o horizon-server.mjs
+node horizon-server.mjs update
+npm start
+```
+
+Your existing media and settings stay in that folder. From then on, use `npm run update` for future releases. If you run Horizon as a systemd service, update its startup command as described in [Running in the background](ADVANCED_SETUP.md#running-in-the-background).
 
 [Back to Horizon](../README.md)

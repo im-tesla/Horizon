@@ -1,6 +1,6 @@
 {
   "name": "horizon-stream",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "description": "Original-quality streaming for Windows and Linux, powered by mpv.",
   "author": "Horizon contributors",

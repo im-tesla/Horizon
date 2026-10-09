@@ -15,6 +15,7 @@ export function releaseAssets(directory, version) {
     appImage,
     deb,
     `horizon-server-${version}-linux-x64.tar.gz`,
+    "horizon-server.mjs",
     "latest.yml",
     "latest-linux.yml",
   ];

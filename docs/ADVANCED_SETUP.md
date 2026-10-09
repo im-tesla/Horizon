@@ -73,8 +73,26 @@ The [systemd service example](../deploy/horizon.service) starts the server autom
 - Configuration in `/etc/horizon.env`.
 - `HORIZON_DATA_DIR=/var/lib/horizon`, writable by that service user.
 - Read permission for the service user on your media folder.
+- A writable `/opt/horizon/.horizon` directory for version records and application updates.
 
 The example blocks access to `/home`, so keep its media folder elsewhere. Adjust these paths and permissions before enabling the service.
+
+The service starts `node /opt/horizon/horizon-server.mjs start`. For an older service, change its `ExecStart` to that command, then run `sudo systemctl daemon-reload` and `sudo systemctl restart horizon` once.
+
+Give the `horizon` user ownership of the updater's application files and folders:
+
+```sh
+sudo install -d -o horizon -g horizon /opt/horizon/.horizon /var/lib/horizon
+sudo chown horizon:horizon /opt/horizon /opt/horizon/package.json /opt/horizon/horizon-server.mjs
+```
+
+Apply updates as that same user:
+
+```sh
+sudo -u horizon node /opt/horizon/horizon-server.mjs update
+```
+
+The service restarts its server process after a successful update. Use `rollback` in place of `update` to restore the previous version. The updater does not move media or change `/etc/horizon.env`.
 
 ## Internet access
 
