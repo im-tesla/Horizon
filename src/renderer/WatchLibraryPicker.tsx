@@ -16,6 +16,7 @@ import {
 } from "../shared/types";
 import { resolution as format } from "../shared/media-formats";
 import { MediaBadges, WatchedStatus, watchedCount } from "./MediaBadges";
+import { orderEpisodes } from "../shared/media-order";
 
 interface Title {
   key: string;
@@ -74,12 +75,7 @@ export function WatchLibraryPicker({
     return [...result.values()]
       .map((title) => ({
         ...title,
-        items: title.items.sort(
-          (a, b) =>
-            (a.season ?? 0) - (b.season ?? 0) ||
-            (a.episode ?? 0) - (b.episode ?? 0) ||
-            a.filename.localeCompare(b.filename),
-        ),
+        items: orderEpisodes(title.items),
         search: fold(
           `${title.title} ${title.items[0].title} ${title.metadata?.year ?? title.items[0].year ?? ""}`,
         ),

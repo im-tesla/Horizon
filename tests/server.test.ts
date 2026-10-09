@@ -15,6 +15,40 @@ import { createServer } from "../src/server/app";
 import { MediaLibrary } from "../src/server/library";
 
 const token = "test-only-token-with-more-than-24-characters";
+test("library orders a series numerically across differently capitalized filenames", async () => {
+  const directory = await mkdtemp(
+    path.join(os.tmpdir(), "horizon-episode-order-"),
+  );
+  const mediaDir = path.join(directory, "media");
+  await mkdir(mediaDir);
+  const names = [
+    "You.S05E06.mkv",
+    "YOU.S05E07.mkv",
+    "You.S05E08.mkv",
+    "you.S05E01.mkv",
+    "you.S05E02.mkv",
+    "you.S05E10.mkv",
+    "You.S02E01.mkv",
+  ];
+  await Promise.all(
+    names.map((name) => writeFile(path.join(mediaDir, name), "fixture")),
+  );
+  const library = new MediaLibrary({
+    mediaDir,
+    dataDir: path.join(directory, "data"),
+    ffprobe: "nonexistent-test-ffprobe",
+  });
+  try {
+    await library.start();
+    assert.deepEqual(
+      library.snapshot().items.map((item) => `${item.season}:${item.episode}`),
+      ["2:1", "5:1", "5:2", "5:6", "5:7", "5:8", "5:10"],
+    );
+  } finally {
+    await library.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 test("upgrading inspection cache re-probes files without changing media IDs or added dates", async () => {
   const directory = await mkdtemp(
     path.join(os.tmpdir(), "horizon-probe-upgrade-"),

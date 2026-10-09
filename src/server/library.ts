@@ -15,6 +15,7 @@ import {
 import path from "node:path";
 import chokidar from "chokidar";
 import { parseFilename } from "../shared/filenames";
+import { compareEpisodes } from "../shared/media-order";
 import type { Library, MediaItem, MediaTrack } from "../shared/types";
 
 const exec = promisify(execFile);
@@ -125,9 +126,10 @@ export class MediaLibrary extends EventEmitter {
         .map((value) => value.item)
         .sort(
           (a, b) =>
-            a.title.localeCompare(b.title) ||
-            (a.season ?? 0) - (b.season ?? 0) ||
-            (a.episode ?? 0) - (b.episode ?? 0),
+            a.title.localeCompare(b.title, undefined, {
+              numeric: true,
+              sensitivity: "base",
+            }) || compareEpisodes(a, b),
         ),
     };
   }

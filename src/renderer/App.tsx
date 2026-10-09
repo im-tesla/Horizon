@@ -14,7 +14,6 @@ import {
   ArrowRight,
   Check,
   CheckCheck,
-  ChevronDown,
   Clock3,
   Film,
   LayoutGrid,
@@ -51,6 +50,8 @@ import type { WatchState } from "../shared/watch-together";
 import { defaultPalette } from "../shared/palette";
 import { resolution as quality, formatBadges } from "../shared/media-formats";
 import { MediaBadges, WatchedStatus, watchedCount } from "./MediaBadges";
+import { Dropdown } from "./Dropdown";
+import { orderEpisodes } from "../shared/media-order";
 
 type View = "all" | "movie" | "tv" | "continue" | "watched";
 type Page = "library" | "settings" | "details" | "player" | "together";
@@ -265,7 +266,9 @@ export default function App() {
         });
       result.get(key)!.items.push(item);
     }
-    return [...result.values()].sort((a, b) => a.title.localeCompare(b.title));
+    return [...result.values()]
+      .map((group) => ({ ...group, items: orderEpisodes(group.items) }))
+      .sort((a, b) => a.title.localeCompare(b.title));
   }, [library, local?.metadata]);
   const getProgress = (item: MediaItem) =>
     local?.history[historyKey(library?.serverId ?? "", item.id)];
@@ -1147,39 +1150,38 @@ function PlayerBar({
         />
         <span>{time(player.duration)}</span>
       </div>
-      <select
-        aria-label="Audio track"
-        data-player-control="tracks"
+      <Dropdown
+        label="Audio track"
+        control="tracks"
         value={
           player.tracks.find((t) => t.type === "audio" && t.selected)?.id ?? ""
         }
-        onChange={(event) => command("audio", Number(event.target.value))}
-      >
-        {player.tracks
+        placeholder="No audio tracks"
+        onChange={(value) => command("audio", Number(value))}
+        options={player.tracks
           .filter((t) => t.type === "audio")
-          .map((track) => (
-            <option key={track.id} value={track.id}>
-              {track.title ?? track.lang ?? `Audio ${track.id}`} · {track.codec}
-            </option>
-          ))}
-      </select>
-      <select
-        aria-label="Subtitle track"
-        data-player-control="tracks"
+          .map((track) => ({
+            value: track.id,
+            label: `${track.title ?? track.lang ?? `Audio ${track.id}`} · ${track.codec ?? ""}`,
+          }))}
+      />
+      <Dropdown
+        label="Subtitle track"
+        control="tracks"
         value={
           player.tracks.find((t) => t.type === "sub" && t.selected)?.id ?? -1
         }
-        onChange={(event) => command("subtitle", Number(event.target.value))}
-      >
-        <option value={-1}>Subtitles off</option>
-        {player.tracks
-          .filter((t) => t.type === "sub")
-          .map((track) => (
-            <option key={track.id} value={track.id}>
-              {track.title ?? track.lang ?? `Subtitle ${track.id}`}
-            </option>
-          ))}
-      </select>
+        onChange={(value) => command("subtitle", Number(value))}
+        options={[
+          { value: -1, label: "Subtitles off" },
+          ...player.tracks
+            .filter((t) => t.type === "sub")
+            .map((track) => ({
+              value: track.id,
+              label: track.title ?? track.lang ?? `Subtitle ${track.id}`,
+            })),
+        ]}
+      />
       {settings && (
         <fieldset
           aria-label="Subtitle appearance"
@@ -1188,21 +1190,22 @@ function PlayerBar({
           <legend>Subtitle appearance</legend>
           <label>
             Subtitle font
-            <select
+            <Dropdown
+              label="Subtitle font"
               value={settings.subtitleFont}
-              onChange={(event) =>
+              onChange={(value) =>
                 void bridge!
                   .saveSettings({
-                    subtitleFont: event.target
-                      .value as Settings["subtitleFont"],
+                    subtitleFont: value,
                   })
                   .catch((error) => onError(errorText(error)))
               }
-            >
-              <option value="Inter">Modern · Inter</option>
-              <option value="Noto Serif">Serif · Noto Serif</option>
-              <option value="Noto Sans Mono">Mono · Noto Sans Mono</option>
-            </select>
+              options={[
+                { value: "Inter", label: "Modern · Inter" },
+                { value: "Noto Serif", label: "Serif · Noto Serif" },
+                { value: "Noto Sans Mono", label: "Mono · Noto Sans Mono" },
+              ]}
+            />
           </label>
           {(
             [
@@ -1229,21 +1232,22 @@ function PlayerBar({
           ))}
           <label>
             Subtitle color
-            <select
+            <Dropdown
+              label="Subtitle color"
               value={settings.subtitleColor}
-              onChange={(event) =>
+              onChange={(value) =>
                 void bridge!
                   .saveSettings({
-                    subtitleColor: event.target
-                      .value as Settings["subtitleColor"],
+                    subtitleColor: value,
                   })
                   .catch((error) => onError(errorText(error)))
               }
-            >
-              <option value="white">White</option>
-              <option value="warm">Warm</option>
-              <option value="yellow">Yellow</option>
-            </select>
+              options={[
+                { value: "white", label: "White" },
+                { value: "warm", label: "Warm" },
+                { value: "yellow", label: "Yellow" },
+              ]}
+            />
           </label>
           <label>
             <input
@@ -1393,18 +1397,18 @@ function SettingsPage({
               <div className="field-row">
                 <label>
                   Metadata language
-                  <select
+                  <Dropdown
+                    label="Metadata language"
                     value={form.metadataLanguage}
-                    onChange={(event) =>
-                      change("metadataLanguage", event.target.value)
-                    }
-                  >
-                    <option value="en-US">English</option>
-                    <option value="pl-PL">Polski</option>
-                    <option value="de-DE">Deutsch</option>
-                    <option value="fr-FR">Français</option>
-                    <option value="es-ES">Español</option>
-                  </select>
+                    onChange={(value) => change("metadataLanguage", value)}
+                    options={[
+                      { value: "en-US", label: "English" },
+                      { value: "pl-PL", label: "Polski" },
+                      { value: "de-DE", label: "Deutsch" },
+                      { value: "fr-FR", label: "Français" },
+                      { value: "es-ES", label: "Español" },
+                    ]}
+                  />
                 </label>
                 <label>
                   Preferred subtitles
@@ -1691,20 +1695,16 @@ function DetailPage({
           <div className="episodes">
             <div className="section-title">
               <h3>Episodes</h3>
-              <div className="select-wrapper">
-                <select
-                  aria-label="Season"
-                  value={season}
-                  onChange={(event) => setSeason(Number(event.target.value))}
-                >
-                  {seasons.map((number) => (
-                    <option key={number} value={number}>
-                      Season {number}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={14} />
-              </div>
+              <Dropdown<number>
+                className="season-dropdown"
+                label="Season"
+                value={season}
+                onChange={setSeason}
+                options={seasons.map((number) => ({
+                  value: number,
+                  label: number === 0 ? "Specials" : `Season ${number}`,
+                }))}
+              />
             </div>
             {group.items
               .filter((i) => i.season === season)

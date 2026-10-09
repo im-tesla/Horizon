@@ -29,8 +29,7 @@ body {
   margin: 0;
 }
 button,
-input,
-select {
+input {
   font: inherit;
 }
 button {
@@ -44,13 +43,11 @@ button:disabled {
   opacity: 0.55;
 }
 button:focus-visible,
-input:focus-visible,
-select:focus-visible {
+input:focus-visible {
   outline: 2px solid var(--mint);
   outline-offset: 4px;
 }
-input,
-select {
+input {
   color: inherit;
 }
 button svg {
@@ -772,7 +769,6 @@ nav {
   line-height: 1.5;
 }
 .settings-section input:not([type="checkbox"]):not([type="range"]),
-.settings-section select,
 .identify-panel input {
   display: block;
   width: 100%;
@@ -784,8 +780,7 @@ nav {
   margin-top: 7px;
   outline: none;
 }
-.settings-section input:focus,
-.settings-section select:focus {
+.settings-section input:focus {
   border-color: rgb(var(--accent-rgb) / 0.333);
 }
 .field-note {
@@ -908,25 +903,106 @@ input[type="range"] {
   margin-top: 27px;
   padding-top: 23px;
 }
-.select-wrapper {
-  position: relative;
+.dropdown {
+  min-width: 0;
+}
+.dropdown-trigger {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 12px;
+  border: 1px solid #ffffff14;
+  border-radius: 8px;
+  background: #0c0e12;
+  color: #e1e7ed;
+  font-size: 12px;
+  text-align: left;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease;
 }
-.select-wrapper select {
-  appearance: none;
-  border: 1px solid #ffffff0d;
-  border-radius: 6px;
+.dropdown-trigger > span,
+.dropdown-option > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dropdown-trigger:hover,
+.dropdown-trigger[aria-expanded="true"] {
+  border-color: rgb(var(--accent-rgb) / 0.35);
+  background: #ffffff07;
+}
+.dropdown-trigger > svg {
+  color: #91a09d;
+  transition: transform 180ms ease;
+}
+.dropdown-trigger[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+.dropdown-trigger:disabled {
+  cursor: default;
+}
+.settings-section .dropdown {
+  margin-top: 7px;
+}
+.season-dropdown {
+  width: 140px;
+}
+.season-dropdown .dropdown-trigger {
+  min-height: 34px;
+  padding: 8px 11px;
   background: #ffffff05;
-  padding: 8px 30px 8px 11px;
-  font-size: 10px;
-  color: #b8c2ca;
 }
-.select-wrapper svg {
-  position: absolute;
-  right: 10px;
-  pointer-events: none;
-  color: #839199;
+.dropdown-menu {
+  position: fixed;
+  z-index: 100;
+  padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid #ffffff1a;
+  border-radius: 10px;
+  background: color-mix(in srgb, rgb(var(--ambient-rgb)) 10%, #15171c);
+  box-shadow: 0 12px 36px #0009;
+  animation: dropdown-enter 140ms ease-out both;
+}
+.dropdown-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 5px;
+  color: #d5dce2;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+}
+.dropdown-option[data-active] {
+  background: rgb(var(--accent-rgb) / 0.1);
+}
+.dropdown-option[aria-selected="true"] {
+  color: var(--mint);
+}
+.dropdown-option > svg {
+  flex-shrink: 0;
+}
+.dropdown-option[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+@keyframes dropdown-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 .episode-row {
   display: flex;
@@ -1134,8 +1210,10 @@ input[type="range"] {
 .seek-control input {
   margin: 0;
 }
-.player-bar select {
+.player-bar .dropdown {
   max-width: 115px;
+}
+.player-bar .dropdown-trigger {
   border: 1px solid #ffffff12;
   background: #ffffff04;
   border-radius: 5px;
@@ -1200,7 +1278,7 @@ input[type="range"] {
     min-width: 100px;
   }
 
-  .player-bar select {
+  .player-bar .dropdown {
     max-width: 80px;
   }
   .breadcrumb {
@@ -1243,8 +1321,7 @@ input[type="range"] {
   font-size: 12px;
 }
 .settings-section label,
-.settings-section input:not([type="checkbox"]):not([type="range"]),
-.settings-section select {
+.settings-section input:not([type="checkbox"]):not([type="range"]) {
   font-size: 12px;
 }
 .settings-section h3 {
@@ -2351,8 +2428,7 @@ input[type="range"] {
 .save-status {
   animation: controls-enter 220ms both;
 }
-input:not([type="range"]),
-select {
+input:not([type="range"]) {
   transition:
     border-color 180ms ease,
     background-color 180ms ease,
