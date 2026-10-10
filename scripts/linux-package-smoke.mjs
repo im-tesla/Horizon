@@ -82,7 +82,7 @@ try {
           items: [item],
         }),
       );
-    } else if (request.url === `/api/stream/${id}`) {
+    } else if (request.url === `/api/media/${id}`) {
       const range = /^bytes=(\d+)-(\d*)$/.exec(request.headers.range ?? "");
       const start = range ? Number(range[1]) : 0;
       const end = range?.[2]
