@@ -90,6 +90,7 @@ try {
         : bytes.length - 1;
       response.setHeader("Accept-Ranges", "bytes");
       response.setHeader("Content-Type", "video/x-matroska");
+      response.setHeader("Content-Length", end - start + 1);
       if (range)
         response.writeHead(206, {
           "Content-Range": `bytes ${start}-${end}/${bytes.length}`,
@@ -116,6 +117,17 @@ try {
     timeout: 30000,
   });
   const page = await application.firstWindow();
+  async function waitForPlayer(predicate, timeout = 30000) {
+    const deadline = Date.now() + timeout;
+    let state;
+    do {
+      state = await page.evaluate(() => window.horizon.playerState());
+      if (state.error) throw new Error(state.error);
+      if (predicate(state)) return state;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    } while (Date.now() < deadline);
+    assert.fail(`Playback did not settle: ${JSON.stringify(state)}`);
+  }
   await page.locator(".settings-page").waitFor();
   const renderer = await application.evaluate(({ BrowserWindow }) => {
     const contents = BrowserWindow.getAllWindows()[0].webContents;
@@ -143,14 +155,8 @@ try {
   await page.getByRole("button", { name: "Save settings" }).click();
   await page.locator(".poster-card").first().click();
   await page.locator(".detail-actions .primary-button").click();
-  await page.waitForFunction(
-    async () => {
-      const state = await window.horizon.playerState();
-      if (state.error) throw new Error(state.error);
-      return state.playing && state.position > 2 && state.controlsReady;
-    },
-    null,
-    { timeout: 30000 },
+  await waitForPlayer(
+    (state) => state.playing && state.position > 2 && state.controlsReady,
   );
   assert(
     streamed > 0,
@@ -199,14 +205,9 @@ try {
     "ac3,eac3,truehd,dts,dts-hd",
   );
   await page.evaluate(() => window.horizon.playerCommand("pause"));
-  await page.waitForFunction(
-    async () => (await window.horizon.playerState()).paused,
-  );
+  await waitForPlayer((state) => state.paused);
   await page.evaluate(() => window.horizon.playerCommand("seek", 8));
-  await page.waitForFunction(
-    async () =>
-      Math.abs((await window.horizon.playerState()).position - 8) < 0.5,
-  );
+  await waitForPlayer((state) => Math.abs(state.position - 8) < 0.5);
   const metrics = await application.evaluate(({ app }) => app.getAppMetrics());
   assert(
     metrics.some((metric) => metric.type === "GPU"),
