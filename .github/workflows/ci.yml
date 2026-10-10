@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-latest]
+        os: [ubuntu-22.04, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -26,14 +26,40 @@ jobs:
         if: runner.os == 'Linux'
         run: bash scripts/install-mpv-build-deps.sh
       - name: Package desktop
+        if: runner.os == 'Windows'
         run: npm run package:dir
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Package and install Ubuntu desktop
+        if: runner.os == 'Linux'
+        run: |
+          npx electron-builder --config electron-builder.cjs --linux deb --publish never
+          bash scripts/test-linux-package.sh
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
       - uses: actions/upload-artifact@v7
         with:
           name: horizon-${{ runner.os }}-unpacked
-          path: release/*-unpacked/
+          path: |
+            release/*-unpacked/
+            release/*.deb
           retention-days: 7
+  linux-newer:
+    needs: check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@v8
+        with:
+          name: horizon-Linux-unpacked
+          path: release
+      - name: Install and play the same package on Ubuntu 24.04
+        run: bash scripts/test-linux-package.sh
   server:
     runs-on: ubuntu-24.04
     steps:

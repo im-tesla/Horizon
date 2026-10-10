@@ -18,7 +18,7 @@ Open the title and choose **Identify title** or **Correct title match** if Horiz
 
 ## Linux desktop help
 
-Downloads are for Intel/AMD x64 computers. Linux desktop builds need **glibc 2.39 or newer**; Ubuntu 24.04 or newer meets that requirement. This desktop requirement does not apply to the separate server archive.
+Downloads are for Intel/AMD x64 computers. Linux desktop builds support **Ubuntu 22.04 and newer** (glibc 2.35 or newer). mpv and its playback libraries are included; you do not need to install mpv separately. This desktop requirement does not apply to the separate server archive.
 
 ### Installing the Ubuntu package
 
@@ -29,6 +29,8 @@ sudo apt install ./Horizon-VERSION-linux-amd64.deb
 ```
 
 Replace `VERSION` with the version in your downloaded filename. The real file is named like `Horizon-0.1.7-linux-amd64.deb`.
+
+The installer sets up Chromium's sandbox automatically, including when updating an older install. If you previously replaced the bundled mpv with a system wrapper, installing the new package restores the included player. Your library, settings and viewing history are kept.
 
 ### Opening an AppImage
 

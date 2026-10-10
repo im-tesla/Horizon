@@ -30,6 +30,11 @@ module.exports = {
     await verifyMpv(
       require("node:path").join(context.appOutDir, "resources", "mpv"),
     );
+    if (context.electronPlatformName === "linux") {
+      const { verifyLinuxRuntime } =
+        await import("./scripts/verify-linux-runtime.mjs");
+      await verifyLinuxRuntime(context.appOutDir);
+    }
   },
   win: {
     target: [
@@ -67,8 +72,9 @@ module.exports = {
     },
   },
   deb: {
+    afterInstall: "scripts/linux-after-install.sh",
     depends: [
-      "libc6 (>= 2.39)",
+      "libc6 (>= 2.35)",
       "libgtk-3-0",
       "libnss3",
       "libxss1",

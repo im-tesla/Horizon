@@ -8,5 +8,46 @@
   "win32-x64": {
     "url": "https://github.com/mpv-player/mpv/releases/download/v0.41.0/mpv-v0.41.0-x86_64-w64-mingw32.zip",
     "sha256": "a49811c0752c108b8260636f9c6f6fcb97406641c98b30f1e7b500dfb20177de"
+  },
+  "linux": {
+    "glibc": "2.35",
+    "sources": {
+      "ffmpeg": {
+        "version": "6.1.6",
+        "url": "https://ffmpeg.org/releases/ffmpeg-6.1.6.tar.xz",
+        "sha256": "d4fcb164028dd3beee5d92c0ac72e46aac6973c75ea12dc14de07bf8f407370a",
+        "archive": "ffmpeg-6.1.6.tar.xz"
+      },
+      "libplacebo": {
+        "version": "7.349.0",
+        "url": "https://codeload.github.com/haasn/libplacebo/tar.gz/1fd3c7bde7b943fe8985c893310b5269a09b46c5",
+        "sha256": "067cd40a3f7ff78d03eeb15665db15e8de45c02423c16a4af07e3c79864f2415",
+        "archive": "libplacebo-7.349.0.tar.gz"
+      },
+      "glad": {
+        "version": "d08b1aa01f8fe57498f04d47b5fa8c48725be877",
+        "url": "https://codeload.github.com/Dav1dde/glad/tar.gz/d08b1aa01f8fe57498f04d47b5fa8c48725be877",
+        "sha256": "7a5fb3299a20e8088a504f3bb2b7247d85c4207706754180a1b4a4840a8728e4",
+        "archive": "glad-d08b1aa01f8fe57498f04d47b5fa8c48725be877.tar.gz"
+      },
+      "fast_float": {
+        "version": "2b2395f9ac836ffca6404424bcc252bff7aa80e4",
+        "url": "https://codeload.github.com/fastfloat/fast_float/tar.gz/2b2395f9ac836ffca6404424bcc252bff7aa80e4",
+        "sha256": "230d20e4e4ac1f6a9df92c4d746c6ec536cdb0c085bc8635d4b88cead5dc22cb",
+        "archive": "fast_float-2b2395f9ac836ffca6404424bcc252bff7aa80e4.tar.gz"
+      },
+      "jinja": {
+        "version": "b08cd4bc64bb980df86ed2876978ae5735572280",
+        "url": "https://codeload.github.com/pallets/jinja/tar.gz/b08cd4bc64bb980df86ed2876978ae5735572280",
+        "sha256": "9a20bab550a760ccb9b38a45d4fe76be92649206ee04633c646d0935a1872b0e",
+        "archive": "jinja-b08cd4bc64bb980df86ed2876978ae5735572280.tar.gz"
+      },
+      "markupsafe": {
+        "version": "c0254f0cfe51720ecc9e72e8896022af29af5b44",
+        "url": "https://codeload.github.com/pallets/markupsafe/tar.gz/c0254f0cfe51720ecc9e72e8896022af29af5b44",
+        "sha256": "1826c5d89cc1aa0b3088f538726d339e0c5cd69fbe03f7b8f9a3f880474d1120",
+        "archive": "markupsafe-c0254f0cfe51720ecc9e72e8896022af29af5b44.tar.gz"
+      }
+    }
   }
 }

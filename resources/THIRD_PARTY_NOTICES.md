@@ -15,7 +15,13 @@ SPIRV-Cross (Apache 2.0), GCC runtime libraries (GPL with runtime exception),
 Vulkan Loader (Apache 2.0), and zlib (zlib license). Upstream source and build
 information: https://github.com/mpv-player/mpv/tree/v0.41.0/ci.
 
-Linux runtime libraries come from the native build host; `runtime-packages.txt`
+Linux mpv, FFmpeg 6.1.6 (LGPL 2.1+) and libplacebo 7.349.0 (LGPL 2.1+) are built
+on Ubuntu 22.04. FFmpeg/libplacebo sources and pinned libplacebo submodules are
+included under `mpv/sources/`; licenses are under `mpv/licenses/`. Build versions,
+source URLs and SHA-256 checksums are recorded in `scripts/mpv-manifest.json`.
+The embedded Linux player uses OpenGL/EGL through X11 or XWayland.
+
+Other Linux runtime libraries come from the native build host; `runtime-packages.txt`
 records their exact source packages and versions and `licenses/` contains their
 distribution copyright and license notices. Sources are available from Ubuntu's
 source archive: https://launchpad.net/ubuntu/+source/ (use the recorded package

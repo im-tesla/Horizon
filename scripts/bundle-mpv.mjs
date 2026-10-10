@@ -13,6 +13,8 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildLinuxDependencies } from "./build-linux-mpv-deps.mjs";
+import { verifyLinuxRuntime } from "./verify-linux-runtime.mjs";
 
 const run = promisify(execFile);
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -23,6 +25,9 @@ const manifestHash = createHash("sha256")
   .update(JSON.stringify(manifest))
   .update(await readFile(fileURLToPath(import.meta.url)))
   .update(await readFile(new URL("extract-mpv.ps1", import.meta.url)))
+  .update(await readFile(new URL("build-linux-mpv-deps.mjs", import.meta.url)))
+  .update(await readFile(new URL("install-mpv-build-deps.sh", import.meta.url)))
+  .update(await readFile(new URL("verify-linux-runtime.mjs", import.meta.url)))
   .update(
     await readFile(
       new URL("../resources/THIRD_PARTY_NOTICES.md", import.meta.url),
@@ -84,6 +89,8 @@ export async function verifyMpv(directory) {
     throw new Error(
       "mpv bundle is missing files or contains modified runtime files.",
     );
+  if (process.platform === "linux")
+    await verifyLinuxRuntime(directory, manifest.linux.glibc);
   const executable = path.join(
     directory,
     process.platform === "win32" ? "mpv.com" : "mpv",
@@ -113,6 +120,12 @@ export async function verifyMpv(directory) {
 }
 
 async function buildLinux(directory, source, cache) {
+  const { prefix, env } = await buildLinuxDependencies(
+    cache,
+    directory,
+    manifest.linux.sources,
+    download,
+  );
   const workspace = path.join(cache, "linux-source");
   await mkdir(workspace, { recursive: true });
   await run("tar", ["-xzf", source, "--strip-components=1", "-C", workspace]);
@@ -127,21 +140,23 @@ async function buildLinux(directory, source, cache) {
     "-Dalsa=enabled",
     "-Dpulse=enabled",
     "-Dx11=enabled",
-    "-Dwayland=enabled",
+    // Horizon embeds through X11/XWayland and EGL. Native Wayland/Vulkan
+    // contexts are unused and require headers newer than Ubuntu 22.04 ships.
+    "-Dwayland=disabled",
     "-Degl=enabled",
     "-Degl-x11=enabled",
-    "-Degl-wayland=enabled",
-    "-Dvulkan=enabled",
+    "-Degl-wayland=disabled",
+    "-Dvulkan=disabled",
     "-Dvaapi=enabled",
     "-Dvaapi-x11=enabled",
-    "-Dvaapi-wayland=enabled",
+    "-Dvaapi-wayland=disabled",
     "-Dlibarchive=disabled",
     "-Dlibavdevice=disabled",
     "-Dmanpage-build=disabled",
     "-Dhtml-build=disabled",
   ];
   console.log(
-    "Building native Linux mpv with ALSA, PulseAudio, X11, Wayland and libass…",
+    "Building native Linux mpv with ALSA, PulseAudio, X11/XWayland, EGL and libass…",
   );
   // --wipe avoids retaining options from a previous build. No elevated build process.
   const existing = await readFile(
@@ -153,9 +168,10 @@ async function buildLinux(directory, source, cache) {
   await run(
     "meson",
     ["setup", ...(existing ? ["--wipe"] : []), build, workspace, ...options],
-    { maxBuffer: 8 * 1024 * 1024 },
+    { env, maxBuffer: 8 * 1024 * 1024 },
   );
   await run("meson", ["compile", "-C", build, "-j", "2"], {
+    env,
     maxBuffer: 8 * 1024 * 1024,
   });
   const binary = path.join(build, "mpv");
@@ -171,7 +187,7 @@ async function buildLinux(directory, source, cache) {
     /^(?:ld-linux|lib(?:c|m|dl|pthread|rt|resolv|nss_[\w]+)\.so|lib(?:GL|EGL|GLX|GLdispatch|OpenGL|gbm|drm\w*|vulkan|va(?:-x11|-drm|-wayland)?)\.so)/;
   const sources = new Map();
   async function collect(library) {
-    const { stdout } = await run("ldd", [library]);
+    const { stdout } = await run("ldd", [library], { env });
     if (stdout.includes("not found"))
       throw new Error(`Unresolved mpv library: ${stdout}`);
     for (const line of stdout.split("\n")) {
@@ -184,8 +200,21 @@ async function buildLinux(directory, source, cache) {
   }
   await collect(binary);
   const packages = new Map();
+  async function recordPackage(owner) {
+    const { stdout: version } = await run("dpkg-query", [
+      "-W",
+      "-f=${source:Package}\t${source:Version}\n",
+      owner,
+    ]);
+    packages.set(owner, version.trim());
+    await copyFile(
+      path.join("/usr/share/doc", owner.split(":")[0], "copyright"),
+      path.join(directory, "licenses", `${owner.replaceAll(":", "-")}.txt`),
+    );
+  }
   for (const [name, original] of sources) {
     await copyFile(await realpath(original), path.join(directory, "lib", name));
+    if (original.startsWith(`${prefix}/`)) continue;
     let stdout;
     try {
       ({ stdout } = await run("dpkg-query", ["-S", original]));
@@ -193,25 +222,19 @@ async function buildLinux(directory, source, cache) {
       ({ stdout } = await run("dpkg-query", ["-S", await realpath(original)]));
     }
     const owner = stdout.split(": ")[0].split("\n")[0];
-    const { stdout: version } = await run("dpkg-query", [
-      "-W",
-      "-f=${source:Package}\t${source:Version}\n",
-      owner,
-    ]);
-    packages.set(owner, version.trim());
-    const copyright = path.join(
-      "/usr/share/doc",
-      owner.split(":")[0],
-      "copyright",
-    );
-    await copyFile(
-      copyright,
-      path.join(directory, "licenses", `${owner.replaceAll(":", "-")}.txt`),
-    );
+    await recordPackage(owner);
   }
   await writeFile(
     path.join(directory, "runtime-packages.txt"),
-    [...packages.values()].sort().join("\n") + "\n",
+    [
+      ...packages.values(),
+      ...["ffmpeg", "libplacebo"].map(
+        (name) =>
+          `${name}\t${manifest.linux.sources[name].version} (bundled sources)`,
+      ),
+    ]
+      .sort()
+      .join("\n") + "\n",
   );
   await writeFile(
     path.join(directory, "mpv"),

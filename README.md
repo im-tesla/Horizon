@@ -30,7 +30,7 @@ Open the **[latest release](https://github.com/im-tesla/Horizon/releases/latest)
 | Ubuntu | File ending in `linux-amd64.deb` | Open it with your package installer. |
 | Linux, portable app | File ending in `.AppImage` | Allow the file to run as a program, then open it. |
 
-Desktop downloads are for 64-bit Intel/AMD computers. Ubuntu 24.04 or newer is recommended for Linux; see [Linux help](docs/ADVANCED_SETUP.md#linux-desktop-help) for other systems and AppImage instructions.
+Desktop downloads are for 64-bit Intel/AMD computers. Linux packages support Ubuntu 22.04 and newer; see [Linux help](docs/ADVANCED_SETUP.md#linux-desktop-help) for other systems and AppImage instructions.
 
 ### 2. Connect to your library
 
