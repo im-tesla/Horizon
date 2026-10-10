@@ -110,6 +110,7 @@ try {
   delete env.ELECTRON_RUN_AS_NODE;
   application = await electron.launch({
     executablePath: path.join(installation, "horizon"),
+    chromiumSandbox: true,
     args: [],
     env,
     timeout: 30000,
