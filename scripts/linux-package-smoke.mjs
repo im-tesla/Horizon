@@ -191,7 +191,8 @@ try {
           buffer = buffer.slice(newline + 1);
           if (response.request_id !== 991) continue;
           socket.end();
-          if (response.error !== "success") reject(new Error(response.error));
+          if (response.error !== "success")
+            reject(new Error(`${command.join(" ")}: ${response.error}`));
           else resolve(response.data);
         }
       });

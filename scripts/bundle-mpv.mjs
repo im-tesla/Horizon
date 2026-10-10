@@ -181,10 +181,12 @@ async function buildLinux(directory, source, cache) {
   await copyFile(binary, path.join(directory, "bin", "mpv"));
   await chmod(path.join(directory, "bin", "mpv"), 0o755);
 
-  // Leave the host C runtime, graphics loaders and drivers intact. Copy all other
+  // Leave the host C/C++ runtimes, graphics loaders and drivers intact. Newer
+  // Mesa drivers must be able to use their matching host libstdc++/libgcc.
+  // Copy all other
   // linked libraries and their transitive closure, including nonstandard Pulse paths.
   const hostLibrary =
-    /^(?:ld-linux|lib(?:c|m|dl|pthread|rt|resolv|nss_[\w]+)\.so|lib(?:GL|EGL|GLX|GLdispatch|OpenGL|gbm|drm\w*|vulkan|va(?:-x11|-drm|-wayland)?)\.so)/;
+    /^(?:ld-linux|lib(?:c|m|dl|pthread|rt|resolv|stdc\+\+|gcc_s|nss_[\w]+)\.so|lib(?:GL|EGL|GLX|GLdispatch|OpenGL|gbm|drm\w*|vulkan|va(?:-x11|-drm|-wayland)?)\.so)/;
   const sources = new Map();
   async function collect(library) {
     const { stdout } = await run("ldd", [library], { env });

@@ -75,6 +75,8 @@ module.exports = {
     afterInstall: "scripts/linux-after-install.sh",
     depends: [
       "libc6 (>= 2.35)",
+      "libstdc++6 (>= 11)",
+      "libgcc-s1",
       "libgtk-3-0",
       "libnss3",
       "libxss1",

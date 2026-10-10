@@ -174,6 +174,8 @@ export class Player extends EventEmitter {
     if (process.env.HORIZON_MPV_TEST === "true") {
       args.push("--ao=null");
       if (process.env.HORIZON_VIDEO_TEST !== "true") args.push("--vo=null");
+      // Headless CI renders actual gpu-next frames through Mesa llvmpipe.
+      else args.push("--gpu-sw=yes");
     }
     this.process = spawn(executable, args, {
       stdio: ["ignore", "ignore", "pipe"],

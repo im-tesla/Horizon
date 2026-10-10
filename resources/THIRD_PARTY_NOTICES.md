@@ -25,7 +25,7 @@ Other Linux runtime libraries come from the native build host; `runtime-packages
 records their exact source packages and versions and `licenses/` contains their
 distribution copyright and license notices. Sources are available from Ubuntu's
 source archive: https://launchpad.net/ubuntu/+source/ (use the recorded package
-and version). Linux retains the host's C runtime and graphics drivers.
+and version). Linux retains the host's C/C++ runtimes and graphics drivers.
 
 Electron: MIT (https://github.com/electron/electron).
 React: MIT (https://github.com/facebook/react).

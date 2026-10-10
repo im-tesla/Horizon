@@ -46,6 +46,13 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - name: Restore verified Linux playback bundle
+        if: runner.os == 'Linux'
+        id: mpv-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: resources/mpv/linux-x64
+          key: mpv-linux-glibc235-${{ hashFiles('scripts/mpv-manifest.json', 'scripts/bundle-mpv.mjs', 'scripts/build-linux-mpv-deps.mjs', 'scripts/install-mpv-build-deps.sh', 'scripts/verify-linux-runtime.mjs', 'resources/THIRD_PARTY_NOTICES.md') }}
       - name: Install native Linux playback build dependencies
         if: runner.os == 'Linux'
         run: bash scripts/install-mpv-build-deps.sh
@@ -58,6 +65,12 @@ jobs:
       - name: Verify installed Linux package and embedded playback
         if: runner.os == 'Linux'
         run: bash scripts/test-linux-package.sh
+      - name: Cache built Linux playback bundle
+        if: always() && runner.os == 'Linux' && steps.mpv-cache.outputs.cache-hit != 'true' && hashFiles('resources/mpv/linux-x64/bundle.json') != ''
+        uses: actions/cache/save@v5
+        with:
+          path: resources/mpv/linux-x64
+          key: mpv-linux-glibc235-${{ hashFiles('scripts/mpv-manifest.json', 'scripts/bundle-mpv.mjs', 'scripts/build-linux-mpv-deps.mjs', 'scripts/install-mpv-build-deps.sh', 'scripts/verify-linux-runtime.mjs', 'resources/THIRD_PARTY_NOTICES.md') }}
       - uses: actions/upload-artifact@v7
         with:
           name: release-${{ runner.os }}
