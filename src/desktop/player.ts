@@ -17,6 +17,7 @@ import {
   type PlayerKey,
   type Settings,
 } from "../shared/types";
+const passthroughCodecs = "ac3,eac3,truehd,dts,dts-hd";
 export function mpvArguments(
   endpoint: string,
   settings: Settings,
@@ -64,9 +65,11 @@ export function mpvArguments(
     "--sub-spacing=0",
     `--slang=${settings.subtitleLanguage}`,
     "--audio-device=auto",
-    "--audio-spdif=ac3,eac3,truehd,dts,dts-hd",
+    // WASAPI always uses exclusive mode for bitstream audio, even when
+    // audio-exclusive is off. Shared mode must decode audio on this client.
+    `--audio-spdif=${settings.audioExclusive ? passthroughCodecs : ""}`,
     "--audio-channels=auto",
-    "--audio-exclusive=yes",
+    `--audio-exclusive=${settings.audioExclusive ? "yes" : "no"}`,
     "--volume=100",
     "--speed=1",
   ];
@@ -78,6 +81,7 @@ export class Player extends EventEmitter {
   private savedAt = 0;
   private generation = 0;
   private appliedSubtitleProperties: Record<string, string | number> = {};
+  private appliedAudioExclusive?: boolean;
   private appearance = { accent: "DAF1B2", reduced: false, fullscreen: false };
   private watchBadge = { code: "", viewers: 0, ready: 0, waiting: false };
   state: PlayerState = {
@@ -171,6 +175,7 @@ export class Player extends EventEmitter {
       this.uiDirectory,
     );
     this.appliedSubtitleProperties = subtitleProperties(settings);
+    this.appliedAudioExclusive = settings.audioExclusive;
     if (process.env.HORIZON_MPV_TEST === "true") {
       args.push("--ao=null");
       if (process.env.HORIZON_VIDEO_TEST !== "true") args.push("--vo=null");
@@ -410,6 +415,21 @@ export class Player extends EventEmitter {
       this.appliedSubtitleProperties[property] = value;
     }
     await this.configureSubtitleStyle();
+  }
+  async applyAudioSettings(): Promise<void> {
+    const ipc = this.ipc;
+    const exclusive = this.store.settings().audioExclusive;
+    if (!ipc || this.appliedAudioExclusive === exclusive) return;
+    // Reinitialize the decoder/output without reloading the movie or changing
+    // room playback. Disable bitstream first so shared mode releases the device.
+    await ipc.command([
+      "set_property",
+      "audio-spdif",
+      exclusive ? passthroughCodecs : "",
+    ]);
+    if (this.ipc !== ipc) return;
+    await ipc.command(["set_property", "audio-exclusive", exclusive]);
+    if (this.ipc === ipc) this.appliedAudioExclusive = exclusive;
   }
   async focusControl(name: string): Promise<void> {
     await this.ipc?.command([

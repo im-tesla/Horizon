@@ -73,6 +73,7 @@ test("original HDMI bitstream stays at normal speed and credentials never enter 
     subtitleSize: 38,
     subtitleLanguage: "en",
     metadataLanguage: "en-US",
+    audioExclusive: true,
     autoUpdates: true,
   };
   const passthrough = mpvArguments("socket", settings);
@@ -92,6 +93,15 @@ test("original HDMI bitstream stays at normal speed and credentials never enter 
   assert(embedded.includes("--osc=no"));
   assert(embedded.includes("--input-vo-keyboard=yes"));
   assert(embedded.includes("--sub-font=Inter"));
+  const shared = mpvArguments("socket", { ...settings, audioExclusive: false });
+  assert(shared.includes("--audio-exclusive=no"));
+  assert(
+    shared.includes("--audio-spdif="),
+    "Bitstream must not force exclusive mode when sharing audio.",
+  );
+  assert(!shared.includes("--audio-exclusive=yes"));
+  assert(shared.includes("--speed=1"));
+  assert(!shared.join(" ").includes("secret"));
 });
 
 test("artwork themes use prominent cover colors and keep neutral covers readable", () => {

@@ -152,6 +152,9 @@ try {
     .getByLabel("Server address", { exact: true })
     .fill(`http://127.0.0.1:${server.address().port}`);
   await page.getByLabel("Access token", { exact: true }).fill(token);
+  assert(
+    await page.getByRole("switch", { name: "Exclusive audio" }).isChecked(),
+  );
   await page.getByRole("button", { name: "Save settings" }).click();
   await page.locator(".poster-card").first().click();
   await page.locator(".detail-actions .primary-button").click();
@@ -209,6 +212,27 @@ try {
   await waitForPlayer((state) => state.paused);
   await page.evaluate(() => window.horizon.playerCommand("seek", 8));
   await waitForPlayer((state) => Math.abs(state.position - 8) < 0.5);
+  assert.equal(await command(["get_property", "audio-exclusive"]), true);
+  for (const exclusive of [false, true]) {
+    await page.evaluate(
+      (audioExclusive) => window.horizon.saveSettings({ audioExclusive }),
+      exclusive,
+    );
+    assert.equal(await command(["get_property", "audio-exclusive"]), exclusive);
+    assert.equal(
+      await command(["get_property", "audio-spdif"]),
+      exclusive ? "ac3,eac3,truehd,dts,dts-hd" : "",
+    );
+    assert.equal(
+      (await page.evaluate(() => window.horizon.state())).settings
+        .audioExclusive,
+      exclusive,
+    );
+    await waitForPlayer(
+      (state) =>
+        state.playing && state.paused && Math.abs(state.position - 8) < 0.5,
+    );
+  }
   const metrics = await application.evaluate(({ app }) => app.getAppMetrics());
   assert(
     metrics.some((metric) => metric.type === "GPU"),
@@ -216,7 +240,7 @@ try {
   );
   await page.evaluate(() => window.horizon.playerCommand("stop"));
   console.log(
-    "Installed Linux package passed: root-owned sandbox, sandboxed renderer, GPU process, bundled gpu-next video, DD+ decoding, embedded streaming, pause and seeking.",
+    "Installed Linux package passed: root-owned sandbox, sandboxed renderer, GPU process, bundled gpu-next video, DD+ decoding, embedded streaming, pause, seeking and live exclusive/shared audio switching.",
   );
 } finally {
   if (application) await application.close();

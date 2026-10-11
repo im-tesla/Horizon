@@ -1435,6 +1435,32 @@ function SettingsPage({
                 />
               </label>
             </div>
+            <div className="settings-section audio-settings">
+              <h3>
+                <Speaker size={18} /> Audio
+              </h3>
+              <label className="audio-switch-row">
+                <span>
+                  <span className="audio-switch-title">Exclusive audio</span>
+                  <span className="field-note" id="exclusive-audio-description">
+                    Turn off to hear other apps while watching with headphones.
+                    Keep on for original Dolby Atmos and surround sound over
+                    HDMI.
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  aria-label="Exclusive audio"
+                  aria-describedby="exclusive-audio-description"
+                  className="audio-switch"
+                  checked={form.audioExclusive}
+                  onChange={(event) =>
+                    change("audioExclusive", event.target.checked)
+                  }
+                />
+              </label>
+            </div>
             <div className="settings-section">
               <h3>
                 <ArrowDownToLine size={18} /> Updates

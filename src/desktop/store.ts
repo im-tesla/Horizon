@@ -38,6 +38,7 @@ export class ClientStore {
         ...defaultSubtitleStyle,
         subtitleLanguage: "en",
         metadataLanguage: "en-US",
+        audioExclusive: true,
         autoUpdates: true,
       },
       secrets: {},
@@ -75,6 +76,8 @@ export class ClientStore {
           : defaultSubtitleStyle[key as keyof typeof defaultSubtitleStyle],
       });
     }
+    if (typeof this.data.settings.audioExclusive !== "boolean")
+      this.data.settings.audioExclusive = true;
     this.secrets = {
       token: this.decrypt(this.data.secrets.token) || defaults.token || "",
       tmdbKey:

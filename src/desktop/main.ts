@@ -95,18 +95,22 @@ const settingsSchema = z
     ...subtitleStyleSchema.shape,
     subtitleLanguage: z.string().regex(/^[a-zA-Z, -]{0,40}$/),
     metadataLanguage: z.string().regex(/^[a-z]{2}(?:-[A-Z]{2})?$/),
+    audioExclusive: z.boolean(),
     autoUpdates: z.boolean(),
   })
   .partial()
   .strict();
-let subtitleQueue: Promise<void> = Promise.resolve();
-function saveSubtitleSettings(patch: Partial<Settings>) {
+let settingsQueue: Promise<void> = Promise.resolve();
+function savePlaybackSettings(patch: Partial<Settings>) {
   store.saveSettings(patch);
   // Mouse repeats and accessibility controls share one ordered live update path.
-  subtitleQueue = subtitleQueue
+  settingsQueue = settingsQueue
     .catch(() => {})
-    .then(() => player.applySubtitleStyle());
-  return subtitleQueue.then(() => {
+    .then(async () => {
+      await player.applyAudioSettings();
+      await player.applySubtitleStyle();
+    });
+  return settingsQueue.then(() => {
     const settings = store.publicSettings();
     send("settings", settings);
     return settings;
@@ -304,7 +308,7 @@ else {
                         ? z.enum(["true", "false"]).parse(value) === "true"
                         : value,
                   });
-          void saveSubtitleSettings(patch).catch((error) => {
+          void savePlaybackSettings(patch).catch((error) => {
             if (process.env.HORIZON_MPV_TEST === "true")
               console.error("SUBTITLE_STYLE:", error.message);
             void player.notice("Could not update subtitle style.");
@@ -430,7 +434,7 @@ else {
           await player.stop();
         }
         library = undefined;
-        return saveSubtitleSettings(parsed);
+        return savePlaybackSettings(parsed);
       });
       handle("watch-state", () => watch.state);
       handle("watch-create", async (name: unknown, id: unknown) => {

@@ -77,6 +77,7 @@ export interface Settings extends SubtitleStyle {
   watchName: string;
   subtitleLanguage: string;
   metadataLanguage: string;
+  audioExclusive: boolean;
   autoUpdates: boolean;
 }
 export interface PublicSettings extends Omit<Settings, "token" | "tmdbKey"> {

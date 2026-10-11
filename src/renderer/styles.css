@@ -819,6 +819,57 @@ input[type="range"] {
 .checkbox-label input {
   accent-color: var(--mint);
 }
+.settings-section .audio-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  cursor: pointer;
+  margin-top: 0;
+}
+.audio-switch-row > span {
+  flex: 1;
+  min-width: 0;
+}
+.audio-switch-title {
+  color: #e2e6eb;
+  font-size: 13px;
+}
+.audio-switch-row .field-note {
+  margin-top: 6px;
+  font-size: 12px;
+}
+.audio-switch {
+  appearance: none;
+  flex-shrink: 0;
+  width: 42px;
+  height: 25px;
+  border: 1px solid #ffffff1a;
+  border-radius: 999px;
+  background: #3a3e46;
+  padding: 2px;
+  margin: 0;
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+.audio-switch::before {
+  content: "";
+  display: block;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: #f7f9fb;
+  box-shadow: 0 1px 3px #0003;
+  transition: transform 180ms ease;
+}
+.audio-switch:checked {
+  background: var(--mint);
+  border-color: transparent;
+}
+.audio-switch:checked::before {
+  transform: translateX(17px);
+}
 .privacy-note {
   font-size: 9px;
   color: #616b77;
@@ -2315,7 +2366,7 @@ input[type="range"] {
 .picker-episode.selected > svg {
   color: rgb(var(--accent-rgb));
 }
-.settings-grid > .settings-section:last-child {
+.settings-grid > .settings-section:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
 @media (max-width: 1150px) {

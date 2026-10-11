@@ -54,6 +54,8 @@ Move your mouse to show the player controls. Use the audio/subtitle button to ch
 
 For Dolby Atmos or surround sound over HDMI, select your receiver as your computer's sound output and adjust volume on the receiver. Your file, receiver, and computer must support the chosen sound format.
 
+Using headphones and want to hear other apps too? Turn off **Settings → Audio → Exclusive audio**, then click **Save settings**. Keep it on for original HDMI bitstream sound. This choice is saved on your computer and does not affect friends in Watch Together.
+
 Horizon saves your watched status and playback position on your own computer.
 
 ## Watch with friends
