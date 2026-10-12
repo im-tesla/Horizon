@@ -238,12 +238,32 @@ try {
     metrics.some((metric) => metric.type === "GPU"),
     "Chromium's GPU process must be running.",
   );
-  await page.evaluate(() => window.horizon.playerCommand("stop"));
+  const playbackPid = await command(["get_property", "pid"]);
+  const applicationPid = await application.evaluate(() => process.pid);
+  // Force termination bypasses before-quit and every normal cleanup handler.
+  process.kill(applicationPid, "SIGKILL");
+  let playbackAlive = true;
+  const crashDeadline = Date.now() + 10000;
+  while (Date.now() < crashDeadline && playbackAlive) {
+    try {
+      const status = await readFile(`/proc/${playbackPid}/stat`, "utf8");
+      playbackAlive = !/^\d+ \(.*\) Z /.test(status);
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      playbackAlive = false;
+    }
+    if (playbackAlive) await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.equal(
+    playbackAlive,
+    false,
+    "Bundled mpv must exit when Horizon crashes.",
+  );
   console.log(
-    "Installed Linux package passed: root-owned sandbox, sandboxed renderer, GPU process, bundled gpu-next video, DD+ decoding, embedded streaming, pause, seeking and live exclusive/shared audio switching.",
+    "Installed Linux package passed: root-owned sandbox, sandboxed renderer, GPU process, bundled gpu-next video, DD+ decoding, embedded streaming, pause, seeking, live audio switching and automatic mpv shutdown after a forced app crash.",
   );
 } finally {
-  if (application) await application.close();
+  if (application) await application.close().catch(() => {});
   if (server) {
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));

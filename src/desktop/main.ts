@@ -18,6 +18,7 @@ import { autoUpdater } from "electron-updater";
 import { ClientStore } from "./store";
 import { UpdateManager } from "./updates";
 import { Player } from "./player";
+import { PlaybackSessions } from "./playback-sessions";
 import { WatchTogether } from "./watch-together";
 import { Tmdb } from "./tmdb";
 import { VideoSurface } from "./video-surface";
@@ -234,6 +235,8 @@ else {
   app
     .whenReady()
     .then(async () => {
+      const playbackSessions = new PlaybackSessions(app.getPath("userData"));
+      await playbackSessions.recover();
       store = new ClientStore(
         app.getPath("userData"),
         app.isPackaged
@@ -260,6 +263,7 @@ else {
         app.isPackaged
           ? process.resourcesPath
           : path.join(app.getAppPath(), "resources"),
+        playbackSessions,
       );
       let themedMedia: string | undefined;
       player.on("state", (state) => {

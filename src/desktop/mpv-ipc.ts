@@ -14,13 +14,20 @@ export class MpvIpc {
     private endpoint: string,
     private onEvent: (event: any) => void,
   ) {}
-  async connect(alive: () => boolean): Promise<void> {
-    for (let attempt = 0; attempt < 100; attempt++) {
+  async connect(alive: () => boolean, timeout = 8000): Promise<void> {
+    const deadline = Date.now() + timeout;
+    while (Date.now() < deadline) {
       if (!alive()) throw new Error("mpv exited before playback started.");
       try {
         const socket = await new Promise<net.Socket>((resolve, reject) => {
           const candidate = net.createConnection(this.endpoint);
+          candidate.setTimeout(
+            Math.max(1, Math.min(1000, deadline - Date.now())),
+            () =>
+              candidate.destroy(new Error("Playback connection timed out.")),
+          );
           candidate.once("connect", () => {
+            candidate.setTimeout(0);
             candidate.removeListener("error", reject);
             resolve(candidate);
           });
@@ -64,7 +71,7 @@ export class MpvIpc {
     }
     throw new Error("Could not connect to the mpv playback engine.");
   }
-  command(command: unknown[]): Promise<any> {
+  command(command: unknown[], timeout = 10000): Promise<any> {
     if (!this.socket || this.socket.destroyed)
       return Promise.reject(new Error("Playback is not running."));
     return new Promise((resolve, reject) => {
@@ -72,7 +79,7 @@ export class MpvIpc {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error("Playback command timed out."));
-      }, 10000);
+      }, timeout);
       this.pending.set(id, { resolve, reject, timer });
       this.socket!.write(`${JSON.stringify({ command, request_id: id })}\n`);
     });

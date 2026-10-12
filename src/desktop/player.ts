@@ -7,6 +7,8 @@ import os from "node:os";
 import path from "node:path";
 import { EventEmitter } from "node:events";
 import { MpvIpc } from "./mpv-ipc";
+import { PlaybackJob, stopPlaybackProcess } from "./playback-process";
+import type { PlaybackSessions } from "./playback-sessions";
 import { subtitleProperties } from "../shared/subtitles";
 import type { ClientStore } from "./store";
 import {
@@ -82,6 +84,8 @@ export class Player extends EventEmitter {
   private generation = 0;
   private appliedSubtitleProperties: Record<string, string | number> = {};
   private appliedAudioExclusive?: boolean;
+  private job?: PlaybackJob;
+  private sessionId?: string;
   private appearance = { accent: "DAF1B2", reduced: false, fullscreen: false };
   private watchBadge = { code: "", viewers: 0, ready: 0, waiting: false };
   state: PlayerState = {
@@ -98,6 +102,7 @@ export class Player extends EventEmitter {
     private playbackDirectory: string,
     private targetWindow: () => string,
     private uiDirectory: string,
+    private sessions: PlaybackSessions,
   ) {
     super();
   }
@@ -131,9 +136,10 @@ export class Player extends EventEmitter {
       devices: [],
     };
     this.tempDir = await mkdtemp(path.join(os.tmpdir(), "horizon-mpv-"));
+    const sessionId = randomUUID();
     const endpoint =
       process.platform === "win32"
-        ? `\\\\.\\pipe\\horizon-${randomUUID()}`
+        ? `\\\\.\\pipe\\horizon-${sessionId}`
         : path.join(this.tempDir, "ipc");
     const bundled = path.join(
       this.playbackDirectory,
@@ -176,17 +182,28 @@ export class Player extends EventEmitter {
     );
     this.appliedSubtitleProperties = subtitleProperties(settings);
     this.appliedAudioExclusive = settings.audioExclusive;
+    args.push(`--script-opts=horizon_owner=${sessionId}`);
+    // On Linux, fd 3 is a dedicated lifetime connection. mpv quits
+    // when the app dies and the OS closes the other end of this pipe.
+    if (process.platform === "linux") args.push("--input-ipc-client=fd://3");
     if (process.env.HORIZON_MPV_TEST === "true") {
       args.push("--ao=null");
       if (process.env.HORIZON_VIDEO_TEST !== "true") args.push("--vo=null");
       // Headless CI renders actual gpu-next frames through Mesa llvmpipe.
       else args.push("--gpu-sw=yes");
     }
+    this.sessionId = sessionId;
+    this.sessions.record({ id: sessionId, endpoint });
     this.process = spawn(executable, args, {
-      stdio: ["ignore", "ignore", "pipe"],
+      stdio:
+        process.platform === "linux"
+          ? ["ignore", "ignore", "pipe", "pipe"]
+          : ["ignore", "ignore", "pipe"],
       windowsHide: true,
     });
     const child = this.process;
+    const job = new PlaybackJob();
+    this.job = job;
     let spawnError = false;
     child.on("error", () => {
       spawnError = true;
@@ -199,6 +216,8 @@ export class Player extends EventEmitter {
     // Diagnostics are intentionally not logged: HTTP errors can contain authenticated URLs.
     child.stderr?.on("data", () => {});
     child.once("exit", () => {
+      job.close();
+      this.sessions.release(sessionId);
       if (this.generation !== generation) return;
       this.save();
       this.ipc?.close();
@@ -209,6 +228,12 @@ export class Player extends EventEmitter {
       if (this.generation === generation) this.handleEvent(event);
     });
     try {
+      if (child.pid) {
+        job.attach(child.pid);
+        this.sessions.record({ id: sessionId, endpoint, pid: child.pid });
+      }
+      child.stdio[3]?.on("error", () => {});
+      child.stdio[3]?.on("data", () => {});
       await this.ipc.connect(
         () =>
           !spawnError && child.exitCode === null && child.signalCode === null,
@@ -509,24 +534,15 @@ export class Player extends EventEmitter {
     this.save();
     const child = this.process;
     const ipc = this.ipc;
+    const job = this.job;
+    const sessionId = this.sessionId;
     this.generation++;
     this.process = undefined;
     this.ipc = undefined;
-    if (child && child.exitCode === null && child.signalCode === null) {
-      await ipc?.command(["quit"]).catch(() => {});
-      if (child.exitCode === null && child.signalCode === null)
-        await new Promise<void>((resolve) => {
-          const timer = setTimeout(() => {
-            child.kill();
-            resolve();
-          }, 1200);
-          child.once("exit", () => {
-            clearTimeout(timer);
-            resolve();
-          });
-        });
-    }
-    ipc?.close();
+    this.job = undefined;
+    this.sessionId = undefined;
+    await stopPlaybackProcess(child, ipc, job);
+    if (sessionId) this.sessions.release(sessionId);
     if (this.tempDir) {
       await rm(this.tempDir, { recursive: true, force: true }).catch(() => {});
       this.tempDir = undefined;
