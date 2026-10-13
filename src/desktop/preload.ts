@@ -21,6 +21,7 @@ const bridge: HorizonBridge = {
   artworkTheme: (source) => invoke("artwork-theme", source),
   playerCommand: (command, value) => invoke("player-command", command, value),
   playerState: () => invoke("player-state"),
+  playerBack: () => invoke("player-back"),
   playerKey: (key) => invoke("player-key", key),
   focusPlayerControl: (name) => invoke("player-focus", name),
   setWatched: (key, watched) => invoke("watched", key, watched),

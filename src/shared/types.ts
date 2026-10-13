@@ -168,6 +168,7 @@ export interface HorizonBridge {
     value?: number,
   ): Promise<void>;
   playerState(): Promise<PlayerState>;
+  playerBack(): Promise<void>;
   playerKey(key: PlayerKey): Promise<void>;
   focusPlayerControl(name: string): Promise<void>;
   watchState(): Promise<WatchState>;
@@ -181,7 +182,7 @@ export interface HorizonBridge {
   onWatchPlayback(
     callback: (request: WatchPlaybackRequest) => void,
   ): () => void;
-  onWatchLobby(callback: () => void): () => void;
+  onWatchLobby(callback: (browse: boolean) => void): () => void;
   setWatched(key: string, watched: boolean): Promise<Record<string, Progress>>;
   checkUpdates(): Promise<UpdateState>;
   openUpdateDownload(): Promise<void>;

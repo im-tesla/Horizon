@@ -130,6 +130,12 @@ export class WatchTogether extends EventEmitter {
   async pause(): Promise<void> {
     await this.control({ action: "pause" });
   }
+  async returnToLobby(): Promise<void> {
+    // At EOF the player is already stopped. Pausing that completed episode
+    // would create a new revision and load it again while choosing the next one.
+    if (this.player.state.playing) await this.pause();
+    await this.applying;
+  }
   private async control(control: WatchControl) {
     if (!this.session) throw new Error("Join a Watch Together room first.");
     const generation = this.generation;

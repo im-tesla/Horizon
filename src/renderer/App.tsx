@@ -110,6 +110,7 @@ export default function App() {
   const libraryRef = useRef<Library | undefined>(undefined);
   libraryRef.current = library;
   const [watch, setWatch] = useState<WatchState>({ status: "idle" });
+  const [watchPicker, setWatchPicker] = useState(false);
   const [view, setView] = useState<View>("all");
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
@@ -206,7 +207,10 @@ export default function App() {
             : current,
         );
     });
-    const offLobby = bridge.onWatchLobby(() => setPage("together"));
+    const offLobby = bridge.onWatchLobby((browse) => {
+      setWatchPicker(!!browse);
+      setPage("together");
+    });
     const offPlayback = bridge.onWatchPlayback((request) => {
       void (async () => {
         const current = libraryRef.current ?? (await bridge.library());
@@ -374,6 +378,7 @@ export default function App() {
   async function together(item: MediaItem) {
     try {
       await bridge!.watchCreate(local?.settings.watchName ?? "Guest", item.id);
+      setWatchPicker(false);
       setPage("together");
     } catch (failure) {
       setError(errorText(failure));
@@ -444,7 +449,10 @@ export default function App() {
           ))}
           <button
             className={`nav-item ${page === "together" ? "active" : ""}`}
-            onClick={() => setPage("together")}
+            onClick={() => {
+              setWatchPicker(false);
+              setPage("together");
+            }}
           >
             <UsersRound size={18} strokeWidth={1.7} />
             <span>Watch together</span>
@@ -869,6 +877,7 @@ export default function App() {
             history={local.history}
             name={local.settings.watchName}
             player={player}
+            startBrowsing={watchPicker}
             onError={setError}
             onReturn={async () => {
               const item = library?.items.find(
@@ -888,13 +897,12 @@ export default function App() {
             item={playbackItem}
             group={playbackGroup}
             starting={!!starting}
+            watchingTogether={!!watch.room}
             error={error}
             onError={setError}
             onPlay={() => void play(playbackItem, true)}
             onBack={async () => {
-              await bridge!.playerCommand("stop");
-              await bridge!.fullscreen(false);
-              setPage(detail ? "details" : "library");
+              await bridge!.playerBack();
             }}
           />
         )}
@@ -909,6 +917,7 @@ function PlayerPage({
   item,
   group,
   starting,
+  watchingTogether,
   error,
   onError,
   onBack,
@@ -919,6 +928,7 @@ function PlayerPage({
   item: MediaItem;
   group?: Group;
   starting: boolean;
+  watchingTogether: boolean;
   error: string;
   onError(message: string): void;
   onBack(): Promise<void>;
@@ -1010,18 +1020,22 @@ function PlayerPage({
       if (event.key === "Escape" && fullscreen) {
         void bridge!.fullscreen(false);
         setFullscreen(false);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        void onBack().catch((failure) => onError(errorText(failure)));
       }
     };
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
-  }, [player.playing, fullscreen, toggleFullscreen, onError]);
+  }, [player.playing, fullscreen, toggleFullscreen, onError, onBack]);
   return (
     <section className="playback-page" aria-label="In-app player">
       <header
         className={`playback-header ${player.playing ? "visually-hidden" : ""}`}
       >
         <button className="secondary-button" onClick={back}>
-          <ArrowLeft size={17} /> Back to title
+          <ArrowLeft size={17} />{" "}
+          {watchingTogether ? "Back to room" : "Back to title"}
         </button>
         <div>
           <h1>{group?.title ?? item.title}</h1>

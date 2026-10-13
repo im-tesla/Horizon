@@ -37,6 +37,7 @@ export function WatchLibraryPicker({
   serverId,
   history,
   selectedId,
+  focusSelectedSeries = false,
   onSelect,
   onClose,
 }: {
@@ -45,14 +46,20 @@ export function WatchLibraryPicker({
   serverId: string;
   history: Record<string, Progress>;
   selectedId: string;
+  focusSelectedSeries?: boolean;
   onSelect(id: string): void;
   onClose(): void;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "movie" | "series">("all");
   const [limit, setLimit] = useState(60);
-  const [seriesKey, setSeriesKey] = useState<string>();
-  const [season, setSeason] = useState(1);
+  const selectedEpisode = focusSelectedSeries
+    ? items.find((item) => item.id === selectedId && item.kind === "episode")
+    : undefined;
+  const [seriesKey, setSeriesKey] = useState<string | undefined>(() =>
+    selectedEpisode ? groupKey(selectedEpisode) : undefined,
+  );
+  const [season, setSeason] = useState(selectedEpisode?.season ?? 1);
   const search = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const titles = useMemo(() => {

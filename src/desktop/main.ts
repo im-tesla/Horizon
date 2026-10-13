@@ -367,6 +367,17 @@ else {
       player.on("control", (action, position) => {
         if (watch.active) void watch.command(action, position).catch(() => {});
       });
+      const showWatchRoom = async (browse = false) => {
+        await watch.returnToLobby().catch(() => {});
+        window?.setFullScreen(false);
+        send("watch-lobby", browse);
+      };
+      const returnFromPlayer = async () => {
+        if (watch.active) return showWatchRoom(true);
+        await player.stop();
+        window?.setFullScreen(false);
+        send("player-back", undefined);
+      };
       player.on("ui", (action) => {
         if (action === "fullscreen")
           window?.setFullScreen(!window.isFullScreen());
@@ -374,19 +385,8 @@ else {
           window?.webContents.focus();
           send("player-focus", undefined);
         }
-        if (action === "back")
-          void watch
-            .leave()
-            .then(() => player.stop())
-            .then(() => {
-              window?.setFullScreen(false);
-              send("player-back", undefined);
-            });
-        if (action === "watch-together")
-          void watch
-            .pause()
-            .catch(() => {})
-            .then(() => send("watch-lobby", undefined));
+        if (action === "back") void returnFromPlayer().catch(() => {});
+        if (action === "watch-together") void showWatchRoom().catch(() => {});
       });
       const syncAppearance = () =>
         void player
@@ -404,6 +404,7 @@ else {
       Menu.setApplicationMenu(null);
       handle("state", () => store.state());
       handle("player-state", () => player.state);
+      handle("player-back", returnFromPlayer);
       handle("player-key", (key: unknown) =>
         player.key(z.enum(["SPACE", "LEFT", "RIGHT", "f", "ESC"]).parse(key)),
       );

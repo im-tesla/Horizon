@@ -250,7 +250,7 @@ local function draw()
         rect(ass,0,H-240+i*5,W,5,'000000',(i/47)^1.8*0.85)
         rect(ass,0,i*3,W,3,'000000',(1-i/47)^2*0.66)
     end
-    button(ass,'back',58,54,'Back to title',function() message('horizon-ui','back') end)
+    button(ass,'back',58,54,watch_code~='' and 'Back to room' or 'Back to title',function() message('horizon-ui','back') end)
     if watch_code ~= '' then
         local label = watch_waiting and string.format('Waiting · %d/%d ready',watch_ready,watch_viewers) or string.format('Together · %s · %d watching',watch_code,watch_viewers)
         local bw = 330

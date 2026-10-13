@@ -27,6 +27,7 @@ export function WatchTogetherPage({
   history,
   name,
   player,
+  startBrowsing = false,
   onReturn,
   onError,
 }: {
@@ -36,6 +37,7 @@ export function WatchTogetherPage({
   history: Record<string, Progress>;
   name: string;
   player: PlayerState;
+  startBrowsing?: boolean;
   onReturn(): Promise<void>;
   onError(message: string): void;
 }) {
@@ -52,8 +54,8 @@ export function WatchTogetherPage({
   const room = watch.room;
   useEffect(() => {
     setSelected(watch.room?.selectedMediaId ?? "");
-    setBrowsing(!!watch.room && !watch.room.selectedMediaId);
-  }, [watch.room?.code]);
+    setBrowsing(startBrowsing || (!!watch.room && !watch.room.selectedMediaId));
+  }, [watch.room?.code, startBrowsing]);
   const browse = () => {
     setBrowsing(true);
     requestAnimationFrame(() =>
@@ -246,6 +248,7 @@ export function WatchTogetherPage({
                   history={history}
                   serverId={library?.serverId ?? ""}
                   selectedId={itemId}
+                  focusSelectedSeries={startBrowsing}
                   onSelect={select}
                   onClose={() => setBrowsing(false)}
                 />
