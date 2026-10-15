@@ -405,7 +405,7 @@ try {
     );
     assert.equal(disk.settings.watchName, name);
     assert(!("audioMode" in disk.settings));
-    assert(!("audioDevice" in disk.settings));
+    assert.equal(disk.settings.audioDevice, "auto");
   }
   console.log(
     "Watch Together passed: real guest mouse pause, shared seeking/resume, late join, original HDMI options, and independent local history.",

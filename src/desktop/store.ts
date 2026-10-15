@@ -8,6 +8,7 @@ import {
 import path from "node:path";
 import { safeStorage } from "electron";
 import { defaultSubtitleStyle, subtitleStyleSchema } from "../shared/subtitles";
+import { audioDeviceSchema } from "../shared/audio";
 import type {
   LocalState,
   Metadata,
@@ -39,6 +40,7 @@ export class ClientStore {
         subtitleLanguage: "en",
         metadataLanguage: "en-US",
         audioExclusive: true,
+        audioDevice: "auto",
         autoUpdates: true,
       },
       secrets: {},
@@ -49,12 +51,8 @@ export class ClientStore {
     if (existsSync(this.file)) {
       try {
         const saved = JSON.parse(readFileSync(this.file, "utf8"));
-        // Retire the old audio preferences without touching history or secrets.
-        const {
-          audioMode: _mode,
-          audioDevice: _device,
-          ...settings
-        } = saved.settings ?? {};
+        // Retire the old audio mode without touching history or secrets.
+        const { audioMode: _mode, ...settings } = saved.settings ?? {};
         this.data = {
           ...this.data,
           ...saved,
@@ -78,6 +76,8 @@ export class ClientStore {
     }
     if (typeof this.data.settings.audioExclusive !== "boolean")
       this.data.settings.audioExclusive = true;
+    if (!audioDeviceSchema.safeParse(this.data.settings.audioDevice).success)
+      this.data.settings.audioDevice = "auto";
     this.secrets = {
       token: this.decrypt(this.data.secrets.token) || defaults.token || "",
       tmdbKey:

@@ -10,6 +10,8 @@ import { MpvIpc } from "./mpv-ipc";
 import { PlaybackJob, stopPlaybackProcess } from "./playback-process";
 import type { PlaybackSessions } from "./playback-sessions";
 import { subtitleProperties } from "../shared/subtitles";
+import { audioDeviceList } from "../shared/audio";
+import { discoverAudioDevices } from "./audio-devices";
 import type { ClientStore } from "./store";
 import {
   groupKey,
@@ -18,6 +20,7 @@ import {
   type PlayerState,
   type PlayerKey,
   type Settings,
+  type AudioDevice,
 } from "../shared/types";
 const passthroughCodecs = "ac3,eac3,truehd,dts,dts-hd";
 export function mpvArguments(
@@ -66,7 +69,7 @@ export function mpvArguments(
     "--sub-margin-y=48",
     "--sub-spacing=0",
     `--slang=${settings.subtitleLanguage}`,
-    "--audio-device=auto",
+    `--audio-device=${settings.audioDevice}`,
     // WASAPI always uses exclusive mode for bitstream audio, even when
     // audio-exclusive is off. Shared mode must decode audio on this client.
     `--audio-spdif=${settings.audioExclusive ? passthroughCodecs : ""}`,
@@ -84,6 +87,8 @@ export class Player extends EventEmitter {
   private generation = 0;
   private appliedSubtitleProperties: Record<string, string | number> = {};
   private appliedAudioExclusive?: boolean;
+  private appliedAudioDevice?: string;
+  private deviceQuery?: Promise<AudioDevice[]>;
   private job?: PlaybackJob;
   private sessionId?: string;
   private appearance = { accent: "DAF1B2", reduced: false, fullscreen: false };
@@ -182,6 +187,7 @@ export class Player extends EventEmitter {
     );
     this.appliedSubtitleProperties = subtitleProperties(settings);
     this.appliedAudioExclusive = settings.audioExclusive;
+    this.appliedAudioDevice = settings.audioDevice;
     args.push(`--script-opts=horizon_owner=${sessionId}`);
     // On Linux, fd 3 is a dedicated lifetime connection. mpv quits
     // when the app dies and the OS closes the other end of this pipe.
@@ -238,6 +244,15 @@ export class Player extends EventEmitter {
         () =>
           !spawnError && child.exitCode === null && child.signalCode === null,
       );
+      if (
+        settings.audioDevice !== "auto" &&
+        !audioDeviceList(
+          await this.ipc.command(["get_property", "audio-device-list"]),
+        ).some((device) => device.name === settings.audioDevice)
+      )
+        throw new Error(
+          "Your saved audio output is not connected. Choose another output device in Settings.",
+        );
       // Credentials travel through local IPC, never through process arguments or query strings.
       await this.ipc.command([
         "set_property",
@@ -345,7 +360,7 @@ export class Player extends EventEmitter {
       if (event.name === "track-list" && Array.isArray(value))
         this.state.tracks = value;
       if (event.name === "audio-device-list" && Array.isArray(value))
-        this.state.devices = value;
+        this.state.devices = audioDeviceList(value);
       if (Date.now() - this.savedAt > 2000) this.save();
       this.emitState();
     }
@@ -443,18 +458,50 @@ export class Player extends EventEmitter {
   }
   async applyAudioSettings(): Promise<void> {
     const ipc = this.ipc;
-    const exclusive = this.store.settings().audioExclusive;
-    if (!ipc || this.appliedAudioExclusive === exclusive) return;
+    const { audioExclusive: exclusive, audioDevice } = this.store.settings();
+    if (!ipc) return;
     // Reinitialize the decoder/output without reloading the movie or changing
     // room playback. Disable bitstream first so shared mode releases the device.
-    await ipc.command([
-      "set_property",
-      "audio-spdif",
-      exclusive ? passthroughCodecs : "",
-    ]);
-    if (this.ipc !== ipc) return;
-    await ipc.command(["set_property", "audio-exclusive", exclusive]);
-    if (this.ipc === ipc) this.appliedAudioExclusive = exclusive;
+    if (this.appliedAudioExclusive !== exclusive) {
+      await ipc.command([
+        "set_property",
+        "audio-spdif",
+        exclusive ? passthroughCodecs : "",
+      ]);
+      if (this.ipc !== ipc) return;
+      await ipc.command(["set_property", "audio-exclusive", exclusive]);
+      if (this.ipc !== ipc) return;
+      this.appliedAudioExclusive = exclusive;
+    }
+    if (this.appliedAudioDevice !== audioDevice) {
+      await ipc.command(["set_property", "audio-device", audioDevice]);
+      if (this.ipc === ipc) this.appliedAudioDevice = audioDevice;
+    }
+  }
+  audioDevices(): Promise<AudioDevice[]> {
+    if (this.deviceQuery) return this.deviceQuery;
+    this.deviceQuery = (async () => {
+      if (
+        this.ipc &&
+        this.process?.exitCode === null &&
+        this.process.signalCode === null
+      ) {
+        try {
+          return audioDeviceList(
+            await this.ipc.command(["get_property", "audio-device-list"], 1500),
+          );
+        } catch {}
+      }
+      const settings = this.store.settings();
+      const bundled = path.join(
+        this.playbackDirectory,
+        process.platform === "win32" ? "mpv.exe" : "mpv",
+      );
+      return discoverAudioDevices(settings.mpvPath || bundled);
+    })().finally(() => {
+      this.deviceQuery = undefined;
+    });
+    return this.deviceQuery;
   }
   async focusControl(name: string): Promise<void> {
     await this.ipc?.command([

@@ -826,6 +826,21 @@ input[type="range"] {
   cursor: pointer;
   margin-top: 0;
 }
+.audio-output-setting {
+  margin-bottom: 24px;
+}
+.audio-output-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: #a1aab5;
+  font-size: 12px;
+}
+.audio-output-refresh {
+  width: 28px;
+  height: 28px;
+}
 .audio-switch-row > span {
   flex: 1;
   min-width: 0;

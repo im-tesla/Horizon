@@ -155,6 +155,15 @@ try {
   assert(
     await page.getByRole("switch", { name: "Exclusive audio" }).isChecked(),
   );
+  const outputs = await page.evaluate(() => window.horizon.audioDevices());
+  assert(outputs.some((device) => device.name === "auto"));
+  assert(outputs.every((device) => typeof device.description === "string"));
+  await page
+    .getByRole("combobox", { name: "Output device", exact: true })
+    .click();
+  await page
+    .getByRole("option", { name: "System default", exact: true })
+    .click();
   await page.getByRole("button", { name: "Save settings" }).click();
   await page.locator(".poster-card").first().click();
   await page.locator(".detail-actions .primary-button").click();
@@ -213,6 +222,31 @@ try {
   await page.evaluate(() => window.horizon.playerCommand("seek", 8));
   await waitForPlayer((state) => Math.abs(state.position - 8) < 0.5);
   assert.equal(await command(["get_property", "audio-exclusive"]), true);
+  assert.equal(await command(["get_property", "audio-device"]), "auto");
+  await assert.rejects(
+    page.evaluate(() =>
+      window.horizon.saveSettings({ audioDevice: "horizon-missing/device" }),
+    ),
+  );
+  const alternative = outputs.find((device) => device.name !== "auto");
+  if (alternative) {
+    await page.evaluate(
+      (audioDevice) => window.horizon.saveSettings({ audioDevice }),
+      alternative.name,
+    );
+    assert.equal(
+      await command(["get_property", "audio-device"]),
+      alternative.name,
+    );
+    await waitForPlayer(
+      (state) =>
+        state.playing && state.paused && Math.abs(state.position - 8) < 0.5,
+    );
+    await page.evaluate(() =>
+      window.horizon.saveSettings({ audioDevice: "auto" }),
+    );
+    assert.equal(await command(["get_property", "audio-device"]), "auto");
+  }
   for (const exclusive of [false, true]) {
     await page.evaluate(
       (audioExclusive) => window.horizon.saveSettings({ audioExclusive }),

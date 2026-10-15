@@ -24,6 +24,7 @@ import { Tmdb } from "./tmdb";
 import { VideoSurface } from "./video-surface";
 import { themeFromArtwork } from "./artwork";
 import { defaultSubtitleStyle, subtitleStyleSchema } from "../shared/subtitles";
+import { audioDeviceSchema } from "../shared/audio";
 import type { Settings } from "../shared/types";
 import type { Library, MediaItem, UpdateState } from "../shared/types";
 
@@ -97,6 +98,7 @@ const settingsSchema = z
     subtitleLanguage: z.string().regex(/^[a-zA-Z, -]{0,40}$/),
     metadataLanguage: z.string().regex(/^[a-z]{2}(?:-[A-Z]{2})?$/),
     audioExclusive: z.boolean(),
+    audioDevice: audioDeviceSchema,
     autoUpdates: z.boolean(),
   })
   .partial()
@@ -404,6 +406,7 @@ else {
       Menu.setApplicationMenu(null);
       handle("state", () => store.state());
       handle("player-state", () => player.state);
+      handle("audio-devices", () => player.audioDevices());
       handle("player-back", returnFromPlayer);
       handle("player-key", (key: unknown) =>
         player.key(z.enum(["SPACE", "LEFT", "RIGHT", "f", "ESC"]).parse(key)),
@@ -428,6 +431,17 @@ else {
       );
       handle("settings", async (patch: unknown) => {
         const parsed = settingsSchema.parse(patch);
+        if (
+          parsed.audioDevice &&
+          parsed.audioDevice !== "auto" &&
+          parsed.audioDevice !== store.settings().audioDevice &&
+          !(await player.audioDevices()).some(
+            (device) => device.name === parsed.audioDevice,
+          )
+        )
+          throw new Error(
+            "That audio output is no longer connected. Refresh the output list and choose another device.",
+          );
         if (
           watch.active &&
           ((parsed.serverUrl !== undefined &&

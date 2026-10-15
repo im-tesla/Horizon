@@ -78,6 +78,7 @@ export interface Settings extends SubtitleStyle {
   subtitleLanguage: string;
   metadataLanguage: string;
   audioExclusive: boolean;
+  audioDevice: string;
   autoUpdates: boolean;
 }
 export interface PublicSettings extends Omit<Settings, "token" | "tmdbKey"> {
@@ -100,6 +101,14 @@ export interface PlayerTrack {
   selected?: boolean;
   external?: boolean;
 }
+export interface AudioDevice {
+  name: string;
+  description: string;
+}
+export const defaultAudioDevice: AudioDevice = {
+  name: "auto",
+  description: "System default",
+};
 export interface PlayerState {
   playing: boolean;
   paused: boolean;
@@ -110,7 +119,7 @@ export interface PlayerState {
   duration: number;
   volume: number;
   tracks: PlayerTrack[];
-  devices: { name: string; description: string }[];
+  devices: AudioDevice[];
   error?: string;
   controlsReady?: boolean;
   controlsVisible?: boolean;
@@ -168,6 +177,7 @@ export interface HorizonBridge {
     value?: number,
   ): Promise<void>;
   playerState(): Promise<PlayerState>;
+  audioDevices(): Promise<AudioDevice[]>;
   playerBack(): Promise<void>;
   playerKey(key: PlayerKey): Promise<void>;
   focusPlayerControl(name: string): Promise<void>;

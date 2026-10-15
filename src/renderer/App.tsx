@@ -35,12 +35,14 @@ import {
 import {
   groupKey,
   historyKey,
+  defaultAudioDevice,
   type Library,
   type LocalState,
   type MediaItem,
   type Metadata,
   type PlayerState,
   type PlayerKey,
+  type AudioDevice,
   type PublicSettings,
   type Settings,
   type UpdateState,
@@ -1320,6 +1322,47 @@ function SettingsPage({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [outputs, setOutputs] = useState<AudioDevice[]>([defaultAudioDevice]);
+  const [outputsLoading, setOutputsLoading] = useState(false);
+  const [outputsError, setOutputsError] = useState("");
+  const outputRequest = useRef(0);
+  const refreshOutputs = useCallback(async () => {
+    const request = ++outputRequest.current;
+    setOutputsLoading(true);
+    setOutputsError("");
+    try {
+      const devices = await bridge!.audioDevices();
+      if (request === outputRequest.current) setOutputs(devices);
+    } catch {
+      if (request === outputRequest.current)
+        setOutputsError(
+          "Couldn’t load audio outputs. Try refreshing the list.",
+        );
+    } finally {
+      if (request === outputRequest.current) setOutputsLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    void refreshOutputs();
+    return () => {
+      outputRequest.current++;
+    };
+  }, [refreshOutputs]);
+  const outputMissing = !outputs.some(
+    (device) => device.name === form.audioDevice,
+  );
+  const outputOptions = outputs.map((device) => ({
+    value: device.name,
+    label: device.description,
+  }));
+  if (outputMissing)
+    outputOptions.push({
+      value: form.audioDevice,
+      label:
+        outputsLoading || outputsError
+          ? "Saved device"
+          : "Saved device (not connected)",
+    });
   const change = <K extends keyof typeof form>(
     key: K,
     value: (typeof form)[K],
@@ -1453,6 +1496,37 @@ function SettingsPage({
               <h3>
                 <Speaker size={18} /> Audio
               </h3>
+              <div className="audio-output-setting" aria-busy={outputsLoading}>
+                <div className="audio-output-heading">
+                  <span>Output device</span>
+                  <button
+                    type="button"
+                    className="icon-button audio-output-refresh"
+                    aria-label="Refresh audio outputs"
+                    disabled={outputsLoading}
+                    onClick={() => void refreshOutputs()}
+                  >
+                    <RefreshCw
+                      size={14}
+                      className={outputsLoading ? "spinning" : ""}
+                    />
+                  </button>
+                </div>
+                <Dropdown
+                  label="Output device"
+                  value={form.audioDevice}
+                  onChange={(value) => change("audioDevice", value)}
+                  options={outputOptions}
+                />
+                <p className="field-note" role="status">
+                  {outputsLoading
+                    ? "Looking for audio outputs…"
+                    : outputsError ||
+                      (outputMissing
+                        ? "Your saved output isn’t connected. Reconnect it and refresh, or choose another device."
+                        : "Choose your receiver, speakers, or headphones. System default follows your computer’s sound output.")}
+                </p>
+              </div>
               <label className="audio-switch-row">
                 <span>
                   <span className="audio-switch-title">Exclusive audio</span>

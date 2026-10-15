@@ -56,6 +56,8 @@ For Dolby Atmos or surround sound over HDMI, select your receiver as your comput
 
 Using headphones and want to hear other apps too? Turn off **Settings → Audio → Exclusive audio**, then click **Save settings**. Keep it on for original HDMI bitstream sound. This choice is saved on your computer and does not affect friends in Watch Together.
 
+To choose where Horizon plays sound, open **Settings → Audio → Output device**, select your receiver, speakers, or headphones, and click **Save settings**. **System default** follows your computer’s sound output. Use the refresh button after connecting another device.
+
 Horizon saves your watched status and playback position on your own computer.
 
 ## Watch with friends

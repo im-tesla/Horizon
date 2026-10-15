@@ -74,6 +74,7 @@ test("original HDMI bitstream stays at normal speed and credentials never enter 
     subtitleLanguage: "en",
     metadataLanguage: "en-US",
     audioExclusive: true,
+    audioDevice: "auto",
     autoUpdates: true,
   };
   const passthrough = mpvArguments("socket", settings);
@@ -102,6 +103,13 @@ test("original HDMI bitstream stays at normal speed and credentials never enter 
   assert(!shared.includes("--audio-exclusive=yes"));
   assert(shared.includes("--speed=1"));
   assert(!shared.join(" ").includes("secret"));
+  const receiver = mpvArguments("socket", {
+    ...settings,
+    audioDevice: "wasapi/{receiver-guid}",
+  });
+  assert(receiver.includes("--audio-device=wasapi/{receiver-guid}"));
+  assert(receiver.includes("--audio-spdif=ac3,eac3,truehd,dts,dts-hd"));
+  assert(receiver.includes("--audio-exclusive=yes"));
 });
 
 test("artwork themes use prominent cover colors and keep neutral covers readable", () => {
