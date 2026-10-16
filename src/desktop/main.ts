@@ -396,15 +396,15 @@ else {
         if (action === "back") void returnFromPlayer().catch(() => {});
         if (action === "watch-together") void showWatchRoom().catch(() => {});
       });
-      const syncAppearance = () =>
+      const syncAppearance = (fullscreen = window?.isFullScreen()) =>
         void player
           .setAppearance(
             undefined,
             systemPreferences.getAnimationSettings().prefersReducedMotion,
-            window?.isFullScreen(),
+            fullscreen,
           )
           .catch(() => {});
-      nativeTheme.on("updated", syncAppearance);
+      nativeTheme.on("updated", () => syncAppearance());
       session.defaultSession.setPermissionRequestHandler(
         (_contents, _permission, callback) => callback(false),
       );
@@ -635,8 +635,9 @@ else {
       });
       configureUpdates();
       await createWindow();
-      window?.on("enter-full-screen", syncAppearance);
-      window?.on("leave-full-screen", syncAppearance);
+      // On Windows the OS flag can lag the event; use the new state explicitly.
+      window?.on("enter-full-screen", () => syncAppearance(true));
+      window?.on("leave-full-screen", () => syncAppearance(false));
       if (store.settings().autoUpdates)
         setTimeout(() => {
           void checkUpdates();
