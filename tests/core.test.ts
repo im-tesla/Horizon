@@ -6,6 +6,7 @@ import { defaultSubtitleStyle } from "../src/shared/subtitles";
 import { mpvArguments } from "../src/desktop/player";
 import { historyKey, type Settings } from "../src/shared/types";
 import { artworkPalette, defaultPalette } from "../src/shared/palette";
+import { defaultControllerBindings } from "../src/shared/gamepad";
 
 test("ranges preserve requested original bytes and reject impossible requests", () => {
   assert.equal(parseRange(undefined, 100), undefined);
@@ -75,6 +76,7 @@ test("original HDMI bitstream stays at normal speed and credentials never enter 
     metadataLanguage: "en-US",
     audioExclusive: true,
     audioDevice: "auto",
+    controllerBindings: { ...defaultControllerBindings },
     autoUpdates: true,
   };
   const passthrough = mpvArguments("socket", settings);

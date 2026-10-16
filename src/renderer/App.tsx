@@ -16,6 +16,7 @@ import {
   CheckCheck,
   Clock3,
   Film,
+  Gamepad2,
   LayoutGrid,
   LoaderCircle,
   MonitorPlay,
@@ -54,6 +55,14 @@ import { resolution as quality, formatBadges } from "../shared/media-formats";
 import { MediaBadges, WatchedStatus, watchedCount } from "./MediaBadges";
 import { Dropdown } from "./Dropdown";
 import { orderEpisodes } from "../shared/media-order";
+import { useGamepad, navigateGamepad } from "./gamepad";
+import {
+  controllerCommands,
+  controllerLabels,
+  controllerButtons,
+  defaultControllerBindings,
+  remapController,
+} from "../shared/gamepad";
 
 type View = "all" | "movie" | "tv" | "continue" | "watched";
 type Page = "library" | "settings" | "details" | "player" | "together";
@@ -137,6 +146,29 @@ export default function App() {
     status: "disabled",
     message: "Updates are enabled in GitHub release builds.",
   });
+  useGamepad(
+    page,
+    (action) => {
+      if (page === "player" && player.playing) {
+        void bridge
+          ?.playerGamepad(action)
+          .catch((failure) => setError(errorText(failure)));
+      } else if (!navigateGamepad(action) && action === "back") {
+        if (page === "player")
+          void bridge
+            ?.playerBack()
+            .catch((failure) => setError(errorText(failure)));
+        else {
+          const back = document.querySelector<HTMLButtonElement>(
+            ".picker-back, .room-library-heading button",
+          );
+          if (back) back.click();
+          else setPage("library");
+        }
+      }
+    },
+    local?.settings.controllerBindings,
+  );
   const searchRef = useRef<HTMLInputElement>(null);
   const refreshInFlight = useRef(false);
   const refresh = useCallback(async (manual = false) => {
@@ -252,7 +284,11 @@ export default function App() {
         setPage("library");
         requestAnimationFrame(() => searchRef.current?.focus());
       }
-      if (event.key === "Escape" && !document.querySelector(".playback-page"))
+      if (
+        !event.defaultPrevented &&
+        event.key === "Escape" &&
+        !document.querySelector(".playback-page")
+      )
         setPage("library");
     };
     window.addEventListener("keydown", keydown);
@@ -1614,6 +1650,60 @@ function SettingsPage({
                 )}
               </div>
             </div>
+          </div>
+          <div className="controller-help">
+            <div className="controller-heading">
+              <h3>
+                <Gamepad2 size={18} /> Controller
+              </h3>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() =>
+                  change("controllerBindings", { ...defaultControllerBindings })
+                }
+              >
+                Reset mapping
+              </button>
+            </div>
+            <p>
+              Connect an Xbox, PlayStation, or other standard gamepad and press
+              a button while Horizon is open. Choose your button mapping below,
+              then save settings. Choosing a button already in use swaps the two
+              actions.
+            </p>
+            <div className="controller-bindings">
+              {controllerCommands.map((command) => (
+                <label key={command}>
+                  {controllerLabels[command]}
+                  <Dropdown
+                    label={`Controller: ${controllerLabels[command]}`}
+                    value={form.controllerBindings[command]}
+                    options={controllerButtons}
+                    onChange={(button) =>
+                      change(
+                        "controllerBindings",
+                        remapController(
+                          form.controllerBindings,
+                          command,
+                          button,
+                        ),
+                      )
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+            <dl>
+              <div>
+                <dt>D-pad / left stick</dt>
+                <dd>Browse and show player controls</dd>
+              </div>
+              <div>
+                <dt>Right stick</dt>
+                <dd>Scroll pages and track lists</dd>
+              </div>
+            </dl>
           </div>
           <p className="privacy-note">
             {settings.secureStorage

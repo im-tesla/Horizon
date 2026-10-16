@@ -8,6 +8,8 @@ const listen = <T>(name: string, callback: (value: T) => void) => {
   return () => ipcRenderer.removeListener(`horizon:${name}`, listener);
 };
 const bridge: HorizonBridge = {
+  gamepadActive: () => invoke("gamepad-active"),
+  playerGamepad: (action) => invoke("player-gamepad", action),
   state: () => invoke("state"),
   saveSettings: (patch) => invoke("settings", patch),
   library: () => invoke("library"),

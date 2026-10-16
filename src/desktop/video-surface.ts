@@ -15,8 +15,20 @@ export class VideoSurface {
   private flush?: (...args: any[]) => any;
   private closeDisplay?: (...args: any[]) => any;
   private enableInput?: () => void;
+  private nativeForeground?: () => boolean;
 
   constructor(private window: BrowserWindow) {}
+
+  get foreground(): boolean {
+    if (
+      this.window.isDestroyed() ||
+      !this.window.isVisible() ||
+      this.window.isMinimized()
+    )
+      return false;
+    // The video child belongs to mpv's process and can own keyboard focus.
+    return this.nativeForeground?.() ?? this.window.isFocused();
+  }
 
   get id(): string {
     if (!this.child) this.create();
@@ -29,6 +41,14 @@ export class VideoSurface {
     if (!parent) throw new Error("Horizon's playback window is unavailable.");
     if (process.platform === "win32") {
       const user32 = koffi.load("user32.dll");
+      const foreground = user32.func(
+        "uintptr_t __stdcall GetForegroundWindow()",
+      );
+      const ancestor = user32.func(
+        "uintptr_t __stdcall GetAncestor(uintptr_t window, uint32_t flags)",
+      );
+      this.nativeForeground = () =>
+        BigInt(ancestor(foreground(), 2)) === BigInt(parent);
       const create = user32.func(
         "uintptr_t __stdcall CreateWindowExW(uint32_t exStyle, const char16_t *className, const char16_t *title, uint32_t style, int x, int y, int width, int height, uintptr_t parent, uintptr_t menu, uintptr_t instance, void *param)",
       );
@@ -104,6 +124,32 @@ export class VideoSurface {
         throw new Error(
           "Cannot connect to the X11 display for in-app playback.",
         );
+      const inputFocus = x11.func(
+        "int XGetInputFocus(void *display, _Out_ unsigned long *window, _Out_ int *revert)",
+      );
+      const queryTree = x11.func(
+        "int XQueryTree(void *display, unsigned long window, _Out_ unsigned long *root, _Out_ unsigned long *parent, _Out_ void **children, _Out_ unsigned int *count)",
+      );
+      const free = x11.func("int XFree(void *data)");
+      this.nativeForeground = () => {
+        const focused = [0],
+          revert = [0];
+        inputFocus(this.display, focused, revert);
+        let current = focused[0];
+        for (let depth = 0; current > 1 && depth < 64; depth++) {
+          if (BigInt(current) === BigInt(parent)) return true;
+          const root = [0],
+            next = [0],
+            children = [null],
+            count = [0];
+          if (!queryTree(this.display, current, root, next, children, count))
+            break;
+          if (children[0]) free(children[0]);
+          if (next[0] === current) break;
+          current = next[0];
+        }
+        return false;
+      };
       this.child = create(this.display, parent, 0, 0, 1, 1, 0, 0, 0);
     } else throw new Error("In-app playback supports Windows and Linux.");
     if (!this.child)
@@ -145,6 +191,7 @@ export class VideoSurface {
   }
 
   dispose(): void {
+    this.nativeForeground = undefined;
     if (this.child) {
       if (process.platform === "win32") this.destroy?.(this.child);
       else this.destroy?.(this.display, this.child);

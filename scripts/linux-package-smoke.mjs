@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { _electron as electron } from "playwright";
+import { checkGamepadPlayer } from "./gamepad-test-input.mjs";
 
 const run = promisify(execFile);
 const installation = "/opt/Horizon";
@@ -217,6 +218,7 @@ try {
     await command(["get_property", "audio-spdif"]),
     "ac3,eac3,truehd,dts,dts-hd",
   );
+  await checkGamepadPlayer(application, page);
   await page.evaluate(() => window.horizon.playerCommand("pause"));
   await waitForPlayer((state) => state.paused);
   await page.evaluate(() => window.horizon.playerCommand("seek", 8));

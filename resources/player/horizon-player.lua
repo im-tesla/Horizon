@@ -12,6 +12,9 @@ local accent, reduced, fullscreen = 'DAF1B2', false, false
 local watch_code, watch_viewers, watch_ready, watch_waiting = '', 0, 0, false
 local notice, notice_until, last_seek, pending_seek = '', 0, 0, nil
 local regions, menu_scroll = {}, 0
+local controller = false
+local controller_mouse_x, controller_mouse_y = nil, nil
+local controller_selection = nil
 local active = false
 local subtitle = {font='Inter',size=36,outline=0.8,shadow=1.2,bold=false,color='white',background=false}
 local previous_mouse_x, previous_mouse_y = nil, nil
@@ -281,7 +284,16 @@ local function draw()
     button(ass,'tracks',W-126,cy,'Audio & subtitles',function() if menu and menu~='style' then menu=nil else menu='sub' end; menu_scroll=0 end)
     button(ass,'fullscreen',W-54,cy,fullscreen and 'Exit fullscreen' or 'Fullscreen',function() message('horizon-ui','fullscreen') end)
     if menu=='style' then draw_style(ass) elseif menu then draw_menu(ass) end
+    if controller and focused then
+        local r=control_anchor(focused)
+        if r then
+            local x,y,w,h=r.x-3,r.y-3,r.w+6,r.h+6
+            line(ass,x,y,x+w,y,2,accent); line(ass,x+w,y,x+w,y+h,2,accent)
+            line(ass,x+w,y+h,x,y+h,2,accent); line(ass,x,y+h,x,y,2,accent)
+        end
+    end
     local current=hit()
+    if controller then current=control_anchor(focused) end
     hovered=current and current.name or nil
     if current and current.label and not menu then
         local tw=#current.label*8+24
@@ -298,9 +310,12 @@ local function update()
     if not active then return end
     local pointer = mp.get_property_native('mouse-pos')
     if pointer then
-        if pointer.x ~= previous_mouse_x or pointer.y ~= previous_mouse_y then wake() end
+        if pointer.x ~= previous_mouse_x or pointer.y ~= previous_mouse_y then
+            wake()
+        end
         previous_mouse_x, previous_mouse_y = pointer.x, pointer.y
     end
+    if controller and not menu and not flag('pause') and mp.get_time()-last_motion>=3 then focused=nil; controller_selection=nil; controller=false end
     local wanted=flag('pause') or flag('paused-for-cache') or menu~=nil or drag~=nil or focused~=nil or mp.get_time()-last_motion<3 or mp.get_time()<notice_until
     if wanted ~= visible then
         visible=wanted
@@ -316,6 +331,11 @@ local function update()
     draw()
 end
 local function mouse_move()
+    local pointer=mp.get_property_native('mouse-pos',{})
+    if controller and controller_mouse_x and pointer.x and pointer.y and
+       (math.abs(pointer.x-controller_mouse_x)>3 or math.abs(pointer.y-controller_mouse_y)>3) then
+        focused=nil; controller=false
+    end
     wake()
     if drag then local r=hit(); if r and r.name==drag then r.action() end end
     update()
@@ -325,6 +345,8 @@ mp.set_key_bindings({
 },'horizon-motion','force')
 mp.enable_key_bindings('horizon-motion','allow-hide-cursor')
 mp.add_forced_key_binding('MBTN_LEFT','horizon-click',function(event)
+    if controller then controller=false; focused=nil end
+    controller_selection=nil
     wake(); update()
     local r=hit()
     if event.event=='down' or event.event=='press' then
@@ -343,7 +365,7 @@ end)
 mp.add_forced_key_binding('WHEEL_UP','horizon-scroll-up',function() if menu then menu_scroll=math.max(0,menu_scroll-1) end; wake() end)
 mp.add_forced_key_binding('WHEEL_DOWN','horizon-scroll-down',function() if menu then menu_scroll=menu_scroll+1 end; wake() end)
 for key,action in pairs({SPACE=toggle_pause,LEFT=function() seek_to(number('time-pos')-10) end,RIGHT=function() seek_to(number('time-pos')+10) end,f=function() message('horizon-ui','fullscreen') end,ESC=function() if menu then menu=nil elseif fullscreen then message('horizon-ui','fullscreen') else message('horizon-ui','back') end end,TAB=function() message('horizon-ui','focus-controls') end}) do
-    mp.add_forced_key_binding(key,'horizon-key-'..key,function() action(); wake() end)
+    mp.add_forced_key_binding(key,'horizon-key-'..key,function() if controller then controller=false; focused=nil end; controller_selection=nil; action(); wake() end)
 end
 mp.register_script_message('horizon-config',function(color,motion,full,audio,code,viewers,ready,phase)
     if color and color:match('^%x%x%x%x%x%x$') then accent=color end
@@ -356,7 +378,101 @@ mp.register_script_message('horizon-subtitle-config',function(font,size,outline,
     subtitle={font=font,size=tonumber(size) or 36,outline=tonumber(outline) or 0.8,shadow=tonumber(shadow) or 1.2,bold=bold=='true',color=color,background=background=='true'}
     update()
 end)
-mp.register_script_message('horizon-focus',function(name) focused=name~='' and name or nil; wake(); update() end)
+mp.register_script_message('horizon-focus',function(name) controller_selection=nil; focused=name~='' and name or nil; wake(); update() end)
+mp.register_script_message('horizon-gamepad',function(action)
+    if action=='release' then if controller then focused=nil; controller=false end; update(); return end
+    controller=true
+    -- Mouse hover can hide the ring, just as it does in the library. Preserve
+    -- the selected control so the next controller press keeps its place.
+    focused=controller_selection
+    local pointer=mp.get_property_native('mouse-pos',{})
+    controller_mouse_x,controller_mouse_y=pointer.x,pointer.y
+    wake(); alpha=1; update()
+    local function eligible(r)
+        if r.name=='menu-box' or r.name=='seek' then return false end
+        if menu then return r.name:match('^style%-') or r.name:match('^track%-') or r.name:match('^tab%-') end
+        return not (r.name:match('^style%-') or r.name:match('^track%-') or r.name:match('^tab%-'))
+    end
+    local function ensure_focus()
+        local current=control_anchor(focused)
+        if current and eligible(current) then return current end
+        if not menu then focused='pause'; return control_anchor(focused) end
+        for _,r in ipairs(regions) do
+            if eligible(r) then focused=r.name; return r end
+        end
+    end
+    if action=='pause' then toggle_pause()
+    elseif action=='rewind' then seek_to(number('time-pos')-10)
+    elseif action=='forward' then seek_to(number('time-pos')+10)
+    elseif action=='fullscreen' then message('horizon-ui','fullscreen')
+    elseif action=='back' then
+        if menu then focused=menu=='style' and 'subtitle-style' or 'tracks'; menu=nil
+        elseif fullscreen then message('horizon-ui','fullscreen')
+        else message('horizon-ui','back') end
+    elseif action=='accept' then
+        local current=control_anchor(focused)
+        if not current or not eligible(current) then ensure_focus()
+        else
+            local old_menu=menu
+            current.action()
+            update()
+            if menu~=old_menu then
+                if menu then focused=nil; ensure_focus()
+                else focused=old_menu=='style' and 'subtitle-style' or 'tracks' end
+            end
+        end
+    elseif action=='scroll-up' or action=='scroll-down' then
+        if menu and menu~='style' then menu_scroll=menu_scroll+(action=='scroll-up' and -1 or 1); update(); ensure_focus() end
+    elseif action=='up' or action=='down' or action=='left' or action=='right' then
+        local origin=control_anchor(focused)
+        if not origin or not eligible(origin) then ensure_focus()
+        else
+            local vertical=action=='up' or action=='down'
+            local sign=(action=='up' or action=='left') and -1 or 1
+            local best,score=nil,math.huge
+            -- At a clipped track-list edge, reveal the next row before leaving
+            -- for the tabs. Every language stays reachable with the D-pad.
+            if menu and menu~='style' and vertical and origin.name:match('^track%-') then
+                local tracks={}
+                for _,r in ipairs(regions) do if r.name:match('^track%-') then tracks[#tracks+1]=r end end
+                local edge=action=='up' and tracks[1] or tracks[#tracks]
+                if edge and origin.name==edge.name then
+                    local old_scroll=menu_scroll
+                    menu_scroll=menu_scroll+sign; update()
+                    if menu_scroll~=old_scroll then
+                        tracks={}
+                        for _,r in ipairs(regions) do if r.name:match('^track%-') then tracks[#tracks+1]=r end end
+                        local row=action=='up' and tracks[1] or tracks[#tracks]
+                        if row then focused=row.name end
+                        controller_selection=focused; update(); return
+                    end
+                end
+            end
+            for _,r in ipairs(regions) do
+                if r.name~=origin.name and eligible(r) then
+                    local forward=(vertical and (r.y+r.h/2-origin.y-origin.h/2) or (r.x+r.w/2-origin.x-origin.w/2))*sign
+                    local side=math.abs(vertical and (r.x+r.w/2-origin.x-origin.w/2) or (r.y+r.h/2-origin.y-origin.h/2))
+                    local overlap=vertical and (math.min(r.x+r.w,origin.x+origin.w)-math.max(r.x,origin.x)) or (math.min(r.y+r.h,origin.y+origin.h)-math.max(r.y,origin.y))
+                    local value=forward+side*0.5+(overlap < -2 and 1000 or 0)
+                    if forward>2 and value<score then best=r; score=value end
+                end
+            end
+            if best then focused=best.name
+            elseif menu and menu~='style' and origin.name:match('^track%-') and vertical then
+                local old_scroll=menu_scroll
+                menu_scroll=menu_scroll+sign; update()
+                if old_scroll~=menu_scroll then
+                    local tracks={}
+                    for _,r in ipairs(regions) do if r.name:match('^track%-') then tracks[#tracks+1]=r end end
+                    local row=action=='down' and tracks[#tracks] or tracks[1]
+                    if row then focused=row.name end
+                end
+            end
+        end
+    end
+    controller_selection=focused
+    update()
+end)
 mp.register_event('file-loaded',function() active=true; alpha=0; wake(); update() end)
 mp.register_event('end-file',function() active=false; menu=nil; drag=nil; overlay:remove() end)
 mp.add_periodic_timer(1/30,update)

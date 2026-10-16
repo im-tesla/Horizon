@@ -13,6 +13,7 @@ Watch your movies and TV shows in their original quality, from your own library.
 - Continue where you left off and keep track of what you have watched.
 - Watch with friends: everyone can pause, play, and seek, while keeping their own audio and subtitles.
 - Choose subtitles and adjust their font, size, outline, and shadow.
+- Browse and control playback with a gamepad.
 - Get app updates from GitHub Releases.
 
 mpv is included with the app. Your files keep their original picture and sound quality, so your connection needs to be fast enough to play them.
@@ -59,6 +60,24 @@ Using headphones and want to hear other apps too? Turn off **Settings → Audio 
 To choose where Horizon plays sound, open **Settings → Audio → Output device**, select your receiver, speakers, or headphones, and click **Save settings**. **System default** follows your computer’s sound output. Use the refresh button after connecting another device.
 
 Horizon saves your watched status and playback position on your own computer.
+
+### Use a controller
+
+Connect an Xbox, PlayStation, or other controller recognized with a standard layout, open Horizon, and press a button. Controls work in the library, episode picker, Settings, and player. Use your keyboard to enter text such as search terms or room codes.
+
+| Button | Action |
+| --- | --- |
+| D-pad or left stick | Move between buttons; show player controls |
+| A / Cross | Select the highlighted control |
+| B / Circle | Close a menu or go back; exit fullscreen first |
+| Menu / Options | Play or pause |
+| LB / L1 and RB / R1 | Back or forward 10 seconds |
+| Y / Triangle | Toggle fullscreen |
+| Right stick | Scroll pages or long audio/subtitle lists |
+
+The highlight appears when you use the controller and clears when you return to the mouse or keyboard. In Watch Together, playback buttons control the shared movie; going back keeps you in the room.
+
+To change buttons, open **Settings → Controller**, choose your mapping, and click **Save settings**. Assigning an occupied button swaps the two actions. **Reset mapping** restores the defaults. Your mapping is saved on your computer. D-pad and stick navigation always stay available.
 
 ## Watch with friends
 

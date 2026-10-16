@@ -9,6 +9,8 @@ import path from "node:path";
 import { safeStorage } from "electron";
 import { defaultSubtitleStyle, subtitleStyleSchema } from "../shared/subtitles";
 import { audioDeviceSchema } from "../shared/audio";
+import { controllerBindingsSchema } from "../shared/controller-settings";
+import { defaultControllerBindings } from "../shared/gamepad";
 import type {
   LocalState,
   Metadata,
@@ -41,6 +43,7 @@ export class ClientStore {
         metadataLanguage: "en-US",
         audioExclusive: true,
         audioDevice: "auto",
+        controllerBindings: { ...defaultControllerBindings },
         autoUpdates: true,
       },
       secrets: {},
@@ -78,6 +81,12 @@ export class ClientStore {
       this.data.settings.audioExclusive = true;
     if (!audioDeviceSchema.safeParse(this.data.settings.audioDevice).success)
       this.data.settings.audioDevice = "auto";
+    const bindings = controllerBindingsSchema.safeParse(
+      this.data.settings.controllerBindings,
+    );
+    this.data.settings.controllerBindings = bindings.success
+      ? bindings.data
+      : { ...defaultControllerBindings };
     this.secrets = {
       token: this.decrypt(this.data.secrets.token) || defaults.token || "",
       tmdbKey:

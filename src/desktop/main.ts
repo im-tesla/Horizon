@@ -25,6 +25,8 @@ import { VideoSurface } from "./video-surface";
 import { themeFromArtwork } from "./artwork";
 import { defaultSubtitleStyle, subtitleStyleSchema } from "../shared/subtitles";
 import { audioDeviceSchema } from "../shared/audio";
+import { gamepadActions } from "../shared/gamepad";
+import { controllerBindingsSchema } from "../shared/controller-settings";
 import type { Settings } from "../shared/types";
 import type { Library, MediaItem, UpdateState } from "../shared/types";
 
@@ -99,6 +101,7 @@ const settingsSchema = z
     metadataLanguage: z.string().regex(/^[a-z]{2}(?:-[A-Z]{2})?$/),
     audioExclusive: z.boolean(),
     audioDevice: audioDeviceSchema,
+    controllerBindings: controllerBindingsSchema,
     autoUpdates: z.boolean(),
   })
   .partial()
@@ -215,6 +218,9 @@ async function createWindow() {
       sandbox: true,
       nodeIntegration: false,
       webSecurity: true,
+      // mpv can cover Chromium completely while Horizon is still foreground.
+      // Keep controller polling responsive; native foreground checks gate input.
+      backgroundThrottling: false,
     },
   });
   videoSurface = new VideoSurface(window);
@@ -406,6 +412,12 @@ else {
       Menu.setApplicationMenu(null);
       handle("state", () => store.state());
       handle("player-state", () => player.state);
+      handle("gamepad-active", () => videoSurface.foreground);
+      handle("player-gamepad", (value: unknown) => {
+        const action = z.enum([...gamepadActions, "release"]).parse(value);
+        if (action === "release" || videoSurface.foreground)
+          return player.gamepad(action);
+      });
       handle("audio-devices", () => player.audioDevices());
       handle("player-back", returnFromPlayer);
       handle("player-key", (key: unknown) =>

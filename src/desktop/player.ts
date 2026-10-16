@@ -517,6 +517,15 @@ export class Player extends EventEmitter {
     // mouse. Route both through mpv's bindings so menus and Escape stay in sync.
     await this.ipc.command(["keypress", key]);
   }
+  async gamepad(action: string): Promise<void> {
+    if (!this.state.playing || !this.ipc) return;
+    await this.ipc.command([
+      "script-message-to",
+      "horizon_player",
+      "horizon-gamepad",
+      action,
+    ]);
+  }
   async setWatchRoom(code = "", viewers = 0, ready = 0, waiting = false) {
     this.watchBadge = { code, viewers, ready, waiting };
     await this.configureControls();

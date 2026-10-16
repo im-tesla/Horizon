@@ -79,6 +79,7 @@ export interface Settings extends SubtitleStyle {
   metadataLanguage: string;
   audioExclusive: boolean;
   audioDevice: string;
+  controllerBindings: import("./gamepad").ControllerBindings;
   autoUpdates: boolean;
 }
 export interface PublicSettings extends Omit<Settings, "token" | "tmdbKey"> {
@@ -154,6 +155,10 @@ export interface UpdateState {
   downloadUrl?: string;
 }
 export interface HorizonBridge {
+  gamepadActive(): Promise<boolean>;
+  playerGamepad(
+    action: import("./gamepad").GamepadAction | "release",
+  ): Promise<void>;
   state(): Promise<LocalState>;
   saveSettings(patch: Partial<Settings>): Promise<PublicSettings>;
   library(): Promise<Library>;
