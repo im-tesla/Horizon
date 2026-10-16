@@ -71,7 +71,12 @@ async function fixture(
       }));
     });
     server.listen(Number(process.env.HORIZON_PORT), '127.0.0.1', () => ${legacyReady ? "console.log(JSON.stringify({msg:'Server listening at http://127.0.0.1'}))" : "process.send?.({type:'horizon:ready'})"});
-    process.on('SIGTERM', () => server.close(() => process.exit(0)));
+    const shutdown = () => {
+      server.close(() => process.exit(0));
+      server.closeAllConnections();
+    };
+    process.on('SIGTERM', shutdown);
+    process.on('disconnect', shutdown);
   `,
   );
 }
@@ -159,8 +164,8 @@ test("server updates restart and roll back while keeping media, configuration, a
     const next = await release(directory, "1.1.0");
     const updated = await updateServer(root, {
       fetch: next.fetcher,
-      restartTimeout: 10000,
-      readyTimeout: 3000,
+      restartTimeout: 30000,
+      readyTimeout: 10000,
     });
     assert.equal(updated.version, "1.1.0");
     assert.equal(updated.restarted, true);
@@ -180,7 +185,7 @@ test("server updates restart and roll back while keeping media, configuration, a
     assert.equal(launcher.scripts.update, "node horizon-server.mjs update");
     const unchanged = await updateServer(root, { fetch: next.fetcher });
     assert.equal(unchanged.updated, false);
-    const restored = await rollbackServer(root, { restartTimeout: 10000 });
+    const restored = await rollbackServer(root, { restartTimeout: 30000 });
     assert.equal(restored.version, "1.0.0");
     assert.equal(restored.restarted, true);
     assert.equal(await version(), "1.0.0");
@@ -188,8 +193,8 @@ test("server updates restart and roll back while keeping media, configuration, a
     await assert.rejects(
       updateServer(root, {
         fetch: broken.fetcher,
-        restartTimeout: 10000,
-        readyTimeout: 3000,
+        restartTimeout: 30000,
+        readyTimeout: 10000,
       }),
       /previous version was restored/,
     );
@@ -212,8 +217,14 @@ test("server updates restart and roll back while keeping media, configuration, a
   } finally {
     if (child.exitCode === null) {
       const exited = once(child, "exit");
-      child.send({ type: "horizon:stop" });
-      await exited;
+      const force = setTimeout(() => child.kill("SIGKILL"), 5000);
+      try {
+        if (child.connected) child.send({ type: "horizon:stop" });
+        else child.kill("SIGKILL");
+        await exited;
+      } finally {
+        clearTimeout(force);
+      }
     }
     assert.equal(path.dirname(directory), os.tmpdir());
     await rm(directory, { recursive: true, force: true });

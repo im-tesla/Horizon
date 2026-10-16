@@ -159,9 +159,11 @@ export default function App() {
             ?.playerBack()
             .catch((failure) => setError(errorText(failure)));
         else {
-          const back = document.querySelector<HTMLButtonElement>(
-            ".picker-back, .room-library-heading button",
-          );
+          const back =
+            document.querySelector<HTMLButtonElement>(".picker-back") ??
+            document.querySelector<HTMLButtonElement>(
+              ".room-library-heading button",
+            );
           if (back) back.click();
           else setPage("library");
         }
