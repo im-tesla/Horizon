@@ -79,6 +79,7 @@ export interface Settings extends SubtitleStyle {
   metadataLanguage: string;
   audioExclusive: boolean;
   audioDevice: string;
+  forceDisableDolbyVision: boolean;
   controllerBindings: import("./gamepad").ControllerBindings;
   autoUpdates: boolean;
 }

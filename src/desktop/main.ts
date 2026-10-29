@@ -101,6 +101,7 @@ const settingsSchema = z
     metadataLanguage: z.string().regex(/^[a-z]{2}(?:-[A-Z]{2})?$/),
     audioExclusive: z.boolean(),
     audioDevice: audioDeviceSchema,
+    forceDisableDolbyVision: z.boolean(),
     controllerBindings: controllerBindingsSchema,
     autoUpdates: z.boolean(),
   })
@@ -114,6 +115,7 @@ function savePlaybackSettings(patch: Partial<Settings>) {
     .catch(() => {})
     .then(async () => {
       await player.applyAudioSettings();
+      await player.applyVideoSettings();
       await player.applySubtitleStyle();
     });
   return settingsQueue.then(() => {

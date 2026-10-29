@@ -76,6 +76,7 @@ test("original HDMI bitstream stays at normal speed and credentials never enter 
     metadataLanguage: "en-US",
     audioExclusive: true,
     audioDevice: "auto",
+    forceDisableDolbyVision: false,
     controllerBindings: { ...defaultControllerBindings },
     autoUpdates: true,
   };
@@ -112,6 +113,16 @@ test("original HDMI bitstream stays at normal speed and credentials never enter 
   assert(receiver.includes("--audio-device=wasapi/{receiver-guid}"));
   assert(receiver.includes("--audio-spdif=ac3,eac3,truehd,dts,dts-hd"));
   assert(receiver.includes("--audio-exclusive=yes"));
+  assert(!passthrough.some((argument) => argument.startsWith("--vf")));
+  const hdr10 = mpvArguments("socket", {
+    ...settings,
+    forceDisableDolbyVision: true,
+  });
+  assert(
+    hdr10.includes("--vf-add=@horizon-dolby-vision:format=dolbyvision=no"),
+  );
+  assert(!hdr10.some((argument) => argument.includes("hdr10plus=no")));
+  assert(hdr10.includes("--audio-spdif=ac3,eac3,truehd,dts,dts-hd"));
 });
 
 test("artwork themes use prominent cover colors and keep neutral covers readable", () => {

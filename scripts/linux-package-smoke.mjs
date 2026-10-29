@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { checkVideoSettings } from "./video-settings-check.mjs";
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, stat, rm } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -224,6 +225,7 @@ try {
   await page.evaluate(() => window.horizon.playerCommand("seek", 8));
   await waitForPlayer((state) => Math.abs(state.position - 8) < 0.5);
   assert.equal(await command(["get_property", "audio-exclusive"]), true);
+  await checkVideoSettings(page, command);
   assert.equal(await command(["get_property", "audio-device"]), "auto");
   await assert.rejects(
     page.evaluate(() =>

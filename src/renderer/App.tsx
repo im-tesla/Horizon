@@ -1589,6 +1589,35 @@ function SettingsPage({
             </div>
             <div className="settings-section">
               <h3>
+                <MonitorPlay size={18} /> Video
+              </h3>
+              <label className="audio-switch-row">
+                <span>
+                  <span className="audio-switch-title">
+                    Force disable Dolby Vision
+                  </span>
+                  <span
+                    className="field-note"
+                    id="disable-dolby-vision-description"
+                  >
+                    Ignore Dolby Vision metadata and use HDR10 when available.
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  aria-label="Force disable Dolby Vision"
+                  aria-describedby="disable-dolby-vision-description"
+                  className="audio-switch"
+                  checked={form.forceDisableDolbyVision}
+                  onChange={(event) =>
+                    change("forceDisableDolbyVision", event.target.checked)
+                  }
+                />
+              </label>
+            </div>
+            <div className="settings-section">
+              <h3>
                 <ArrowDownToLine size={18} /> Updates
               </h3>
               <label className="checkbox-label">

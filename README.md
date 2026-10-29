@@ -105,6 +105,8 @@ Server hosts can run **`npm run update`** in their existing server folder. Movie
 - **Want to contribute or build Horizon?** [Developer guide](docs/DEVELOPMENT.md)
 - **Found a problem?** [Report it on GitHub](https://github.com/im-tesla/Horizon/issues)
 
-Add your own movies and shows to the server. The current release supports regular video up to 4K; HDR10 and Dolby Vision playback are not supported yet.
+Add your own movies and shows to the server. Video up to 4K is supported. HDR10 output requires a compatible Windows display connection with HDR enabled; native Dolby Vision output is not supported.
+
+To ignore Dolby Vision metadata, turn on **Settings → Video → Force disable Dolby Vision**, then click **Save settings**. Videos with an HDR10 base layer can use it instead; HDR10+ metadata is retained. The setting applies during playback and is saved on your computer.
 
 Movie information and artwork come from [TMDB](https://www.themoviedb.org/). This product uses the TMDB API but is not endorsed or certified by TMDB. Horizon is [MIT licensed](LICENSE); bundled software keeps its own [licenses](resources/THIRD_PARTY_NOTICES.md).

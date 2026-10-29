@@ -23,6 +23,7 @@ import {
   type AudioDevice,
 } from "../shared/types";
 const passthroughCodecs = "ac3,eac3,truehd,dts,dts-hd";
+const dolbyVisionFilter = "@horizon-dolby-vision:format=dolbyvision=no";
 export function mpvArguments(
   endpoint: string,
   settings: Settings,
@@ -45,6 +46,9 @@ export function mpvArguments(
     `--input-ipc-server=${endpoint}`,
     "--hwdec=auto-safe",
     "--vo=gpu-next",
+    ...(settings.forceDisableDolbyVision
+      ? [`--vf-add=${dolbyVisionFilter}`]
+      : []),
     "--video-sync=audio",
     "--cache=yes",
     "--demuxer-max-bytes=256MiB",
@@ -88,6 +92,7 @@ export class Player extends EventEmitter {
   private appliedSubtitleProperties: Record<string, string | number> = {};
   private appliedAudioExclusive?: boolean;
   private appliedAudioDevice?: string;
+  private appliedForceDisableDolbyVision?: boolean;
   private deviceQuery?: Promise<AudioDevice[]>;
   private job?: PlaybackJob;
   private sessionId?: string;
@@ -188,6 +193,7 @@ export class Player extends EventEmitter {
     this.appliedSubtitleProperties = subtitleProperties(settings);
     this.appliedAudioExclusive = settings.audioExclusive;
     this.appliedAudioDevice = settings.audioDevice;
+    this.appliedForceDisableDolbyVision = settings.forceDisableDolbyVision;
     args.push(`--script-opts=horizon_owner=${sessionId}`);
     // On Linux, fd 3 is a dedicated lifetime connection. mpv quits
     // when the app dies and the OS closes the other end of this pipe.
@@ -477,6 +483,20 @@ export class Player extends EventEmitter {
       await ipc.command(["set_property", "audio-device", audioDevice]);
       if (this.ipc === ipc) this.appliedAudioDevice = audioDevice;
     }
+  }
+  async applyVideoSettings(): Promise<void> {
+    const ipc = this.ipc;
+    const { forceDisableDolbyVision } = this.store.settings();
+    if (!ipc || this.appliedForceDisableDolbyVision === forceDisableDolbyVision)
+      return;
+    // Strip only Dolby Vision metadata; keep HDR10/HDR10+ and other filters.
+    await ipc.command([
+      "vf",
+      forceDisableDolbyVision ? "add" : "remove",
+      forceDisableDolbyVision ? dolbyVisionFilter : "@horizon-dolby-vision",
+    ]);
+    if (this.ipc === ipc)
+      this.appliedForceDisableDolbyVision = forceDisableDolbyVision;
   }
   audioDevices(): Promise<AudioDevice[]> {
     if (this.deviceQuery) return this.deviceQuery;

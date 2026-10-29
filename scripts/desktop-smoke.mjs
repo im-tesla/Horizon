@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import assert from "node:assert/strict";
+import { checkVideoSettings } from "./video-settings-check.mjs";
 import { config } from "dotenv";
 config({ quiet: true });
 const packagedExecutable = process.env.HORIZON_TEST_EXECUTABLE;
@@ -251,6 +252,7 @@ try {
         "ac3,eac3,truehd,dts,dts-hd",
       );
       assert.equal(await native.command(["get_property", "speed"]), 1);
+      await checkVideoSettings(page, native.command);
     } else await page.evaluate(() => window.horizon.playerCommand("seek", 8));
     await waitForPlayer((player) => player.position >= 7, 10000);
     if (process.env.HORIZON_VIDEO_TEST === "true") {

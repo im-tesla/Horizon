@@ -43,6 +43,7 @@ export class ClientStore {
         metadataLanguage: "en-US",
         audioExclusive: true,
         audioDevice: "auto",
+        forceDisableDolbyVision: false,
         controllerBindings: { ...defaultControllerBindings },
         autoUpdates: true,
       },
@@ -81,6 +82,8 @@ export class ClientStore {
       this.data.settings.audioExclusive = true;
     if (!audioDeviceSchema.safeParse(this.data.settings.audioDevice).success)
       this.data.settings.audioDevice = "auto";
+    if (typeof this.data.settings.forceDisableDolbyVision !== "boolean")
+      this.data.settings.forceDisableDolbyVision = false;
     const bindings = controllerBindingsSchema.safeParse(
       this.data.settings.controllerBindings,
     );
