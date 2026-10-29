@@ -118,118 +118,127 @@ async function release(
   return { info, bytes, archive, fetcher };
 }
 
-test("server updates restart and roll back while keeping media, configuration, and library identity in place", async () => {
-  const directory = await mkdtemp(
-    path.join(os.tmpdir(), "horizon-server-updates-"),
-  );
-  const root = path.join(directory, "permanent server folder");
-  await fixture(root, "1.0.0", undefined, true);
-  await mkdir(path.join(root, "media"));
-  await mkdir(path.join(root, ".horizon/server"), { recursive: true });
-  const preserved = {
-    ".env":
-      "HORIZON_MEDIA_DIR=./media\nHORIZON_TOKEN=fixture-kept-secret-token\n",
-    "media/movie.mp4": "original quality movie bytes",
-    ".horizon/server/identity": "permanent-library-id",
-    ".horizon/server/index.json": '{"cached":"inspection"}',
-  };
-  for (const [file, bytes] of Object.entries(preserved))
-    await writeFile(path.join(root, file), bytes);
-  const socket = createServer();
-  socket.listen(0, "127.0.0.1");
-  await once(socket, "listening");
-  const address = socket.address();
-  assert(address && typeof address === "object");
-  const port = address.port;
-  await new Promise<void>((resolve) => socket.close(() => resolve()));
-  const child = fork(path.join(root, "horizon-server.mjs"), ["start"], {
-    cwd: root,
-    env: { ...process.env, HORIZON_PORT: String(port) },
-    stdio: ["ignore", "ignore", "ignore", "ipc"],
-    windowsHide: true,
-  });
-  const endpoint = `http://127.0.0.1:${port}`;
-  const version = async () => {
-    try {
-      return (await (await fetch(endpoint)).json()).version;
-    } catch {
-      return undefined;
-    }
-  };
-  try {
-    await wait(
-      async () => (await version()) === "1.0.0",
-      "The initial server must start.",
+test(
+  "server updates restart and roll back while keeping media, configuration, and library identity in place",
+  {
+    skip:
+      process.platform !== "linux" || process.arch !== "x64"
+        ? "Prebuilt server updates are supported on Linux x64 only."
+        : false,
+  },
+  async () => {
+    const directory = await mkdtemp(
+      path.join(os.tmpdir(), "horizon-server-updates-"),
     );
-    const next = await release(directory, "1.1.0");
-    const updated = await updateServer(root, {
-      fetch: next.fetcher,
-      restartTimeout: 30000,
-      readyTimeout: 10000,
+    const root = path.join(directory, "permanent server folder");
+    await fixture(root, "1.0.0", undefined, true);
+    await mkdir(path.join(root, "media"));
+    await mkdir(path.join(root, ".horizon/server"), { recursive: true });
+    const preserved = {
+      ".env":
+        "HORIZON_MEDIA_DIR=./media\nHORIZON_TOKEN=fixture-kept-secret-token\n",
+      "media/movie.mp4": "original quality movie bytes",
+      ".horizon/server/identity": "permanent-library-id",
+      ".horizon/server/index.json": '{"cached":"inspection"}',
+    };
+    for (const [file, bytes] of Object.entries(preserved))
+      await writeFile(path.join(root, file), bytes);
+    const socket = createServer();
+    socket.listen(0, "127.0.0.1");
+    await once(socket, "listening");
+    const address = socket.address();
+    assert(address && typeof address === "object");
+    const port = address.port;
+    await new Promise<void>((resolve) => socket.close(() => resolve()));
+    const child = fork(path.join(root, "horizon-server.mjs"), ["start"], {
+      cwd: root,
+      env: { ...process.env, HORIZON_PORT: String(port) },
+      stdio: ["ignore", "ignore", "ignore", "ipc"],
+      windowsHide: true,
     });
-    assert.equal(updated.version, "1.1.0");
-    assert.equal(updated.restarted, true);
-    assert.equal(await version(), "1.1.0");
-    const active = await (await fetch(endpoint)).json();
-    assert.equal(
-      active.cwd,
-      root,
-      "Relative media paths must stay rooted in the permanent folder.",
-    );
-    assert.equal(active.media, preserved["media/movie.mp4"]);
-    assert.equal((await currentInstallation(root)).previous.directory, ".");
-    const launcher = JSON.parse(
-      await readFile(path.join(root, "package.json"), "utf8"),
-    );
-    assert.equal(launcher.scripts.start, "node horizon-server.mjs start");
-    assert.equal(launcher.scripts.update, "node horizon-server.mjs update");
-    const unchanged = await updateServer(root, { fetch: next.fetcher });
-    assert.equal(unchanged.updated, false);
-    const restored = await rollbackServer(root, { restartTimeout: 30000 });
-    assert.equal(restored.version, "1.0.0");
-    assert.equal(restored.restarted, true);
-    assert.equal(await version(), "1.0.0");
-    const broken = await release(directory, "1.2.0", port);
-    await assert.rejects(
-      updateServer(root, {
-        fetch: broken.fetcher,
+    const endpoint = `http://127.0.0.1:${port}`;
+    const version = async () => {
+      try {
+        return (await (await fetch(endpoint)).json()).version;
+      } catch {
+        return undefined;
+      }
+    };
+    try {
+      await wait(
+        async () => (await version()) === "1.0.0",
+        "The initial server must start.",
+      );
+      const next = await release(directory, "1.1.0");
+      const updated = await updateServer(root, {
+        fetch: next.fetcher,
         restartTimeout: 30000,
         readyTimeout: 10000,
-      }),
-      /previous version was restored/,
-    );
-    assert.equal((await currentInstallation(root)).current.version, "1.0.0");
-    await wait(
-      async () => (await version()) === "1.0.0",
-      "A rejected live update must restart the previous server.",
-    );
-    const corruptFetch = async (url: string) =>
-      url.endsWith(".tar.gz")
-        ? new Response(Buffer.alloc(broken.bytes.length))
-        : broken.fetcher(url);
-    await assert.rejects(
-      updateServer(root, { fetch: corruptFetch }),
-      /checksum check/,
-    );
-    assert.equal(await version(), "1.0.0");
-    for (const [file, bytes] of Object.entries(preserved))
-      assert.equal(await readFile(path.join(root, file), "utf8"), bytes);
-  } finally {
-    if (child.exitCode === null) {
-      const exited = once(child, "exit");
-      const force = setTimeout(() => child.kill("SIGKILL"), 5000);
-      try {
-        if (child.connected) child.send({ type: "horizon:stop" });
-        else child.kill("SIGKILL");
-        await exited;
-      } finally {
-        clearTimeout(force);
+      });
+      assert.equal(updated.version, "1.1.0");
+      assert.equal(updated.restarted, true);
+      assert.equal(await version(), "1.1.0");
+      const active = await (await fetch(endpoint)).json();
+      assert.equal(
+        active.cwd,
+        root,
+        "Relative media paths must stay rooted in the permanent folder.",
+      );
+      assert.equal(active.media, preserved["media/movie.mp4"]);
+      assert.equal((await currentInstallation(root)).previous.directory, ".");
+      const launcher = JSON.parse(
+        await readFile(path.join(root, "package.json"), "utf8"),
+      );
+      assert.equal(launcher.scripts.start, "node horizon-server.mjs start");
+      assert.equal(launcher.scripts.update, "node horizon-server.mjs update");
+      const unchanged = await updateServer(root, { fetch: next.fetcher });
+      assert.equal(unchanged.updated, false);
+      const restored = await rollbackServer(root, { restartTimeout: 30000 });
+      assert.equal(restored.version, "1.0.0");
+      assert.equal(restored.restarted, true);
+      assert.equal(await version(), "1.0.0");
+      const broken = await release(directory, "1.2.0", port);
+      await assert.rejects(
+        updateServer(root, {
+          fetch: broken.fetcher,
+          restartTimeout: 30000,
+          readyTimeout: 10000,
+        }),
+        /previous version was restored/,
+      );
+      assert.equal((await currentInstallation(root)).current.version, "1.0.0");
+      await wait(
+        async () => (await version()) === "1.0.0",
+        "A rejected live update must restart the previous server.",
+      );
+      const corruptFetch = async (url: string) =>
+        url.endsWith(".tar.gz")
+          ? new Response(Buffer.alloc(broken.bytes.length))
+          : broken.fetcher(url);
+      await assert.rejects(
+        updateServer(root, { fetch: corruptFetch }),
+        /checksum check/,
+      );
+      assert.equal(await version(), "1.0.0");
+      for (const [file, bytes] of Object.entries(preserved))
+        assert.equal(await readFile(path.join(root, file), "utf8"), bytes);
+    } finally {
+      if (child.exitCode === null) {
+        const exited = once(child, "exit");
+        const force = setTimeout(() => child.kill("SIGKILL"), 5000);
+        try {
+          if (child.connected) child.send({ type: "horizon:stop" });
+          else child.kill("SIGKILL");
+          await exited;
+        } finally {
+          clearTimeout(force);
+        }
       }
+      assert.equal(path.dirname(directory), os.tmpdir());
+      await rm(directory, { recursive: true, force: true });
     }
-    assert.equal(path.dirname(directory), os.tmpdir());
-    await rm(directory, { recursive: true, force: true });
-  }
-});
+  },
+);
 
 test("server update checks require official stable assets and numeric versions", async () => {
   assert(compareVersions("1.10.0", "1.9.9") > 0);
